@@ -10,8 +10,8 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Isaac Wilkins | Piano",
-  description: "Cinematic piano arrangements.",
+  title: "Wilkinstudio | Creative Agency", // Change from "Isaac Wilkins"
+  description: "We build digital experiences...",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

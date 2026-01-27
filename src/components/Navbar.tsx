@@ -12,21 +12,13 @@ export default function Navbar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const { theme, setTheme } = useTheme();
-  
+
   const links = [
-    { name: "Home", href: "/" },
-    { name: "Music", href: "/music" },
-    { name: "Connect", href: "/connect" },
-    // Added Studio Link with isExternal flag
-    { name: "Studio", href: "https://your-studio-website.com", isExternal: true },
+    { name: "Studio", href: "/studio" },
+    { name: "Pricing", href: "/pricing" },
+    { name: "FAQ", href: "/faq" },
   ];
 
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
-    setIsOpen(false);
-  };
-
-  // Shared classes for desktop links to keep it DRY and clean
   const getDesktopLinkClasses = (isActive: boolean) => `
     relative text-[10px] font-black uppercase tracking-[0.3em] transition-all
     ${isActive ? "text-foreground" : "text-zinc-500 hover:text-foreground"}
@@ -34,39 +26,45 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 w-full z-50">
-      
-      {/* 1. TOP BAR */}
+      {/* TOP BAR */}
       <div className="w-full border-b border-white/10 dark:border-white/5 bg-white/60 dark:bg-black/80 backdrop-blur-xl">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          {/* Logo also acts as a hard reload to Home */}
+
+          {/* LOGO — Hard Reload */}
           <a href="/" className="relative w-28 sm:w-32 h-8 hover:opacity-70 transition-opacity">
-            <Image src="/logo.png" alt="Logo" fill className="object-contain dark:hidden" priority />
-            <Image src="/logow.png" alt="Logo" fill className="object-contain hidden dark:block" priority />
+            <Image
+              src="/newlogo.png"
+              alt="Logo"
+              fill
+              className="object-contain dark:hidden"
+              priority
+            />
+            <Image
+              src="/newlogow.png"
+              alt="Logo"
+              fill
+              className="object-contain hidden dark:block"
+              priority
+            />
           </a>
 
-          {/* Desktop Nav */}
+          {/* DESKTOP NAV */}
           <div className="hidden md:flex items-center gap-8">
+
+            {/* Home — Hard Reload */}
+            <a
+              href="/"
+              className={getDesktopLinkClasses(pathname === "/")}
+            >
+              Home
+              {pathname === "/" && (
+                <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 bg-foreground rounded-full" />
+              )}
+            </a>
+
             {links.map((link) => {
               const isActive = pathname === link.href;
-              
-              // Handle External Links (Studio) & Home (Hard Refresh)
-              if (link.isExternal || link.name === "Home") {
-                return (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    // Add target blank only for external links
-                    target={link.isExternal ? "_blank" : undefined}
-                    rel={link.isExternal ? "noopener noreferrer" : undefined}
-                    className={getDesktopLinkClasses(isActive)}
-                  >
-                    {link.name}
-                    {isActive && <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 bg-foreground rounded-full" />}
-                  </a>
-                );
-              }
 
-              // Standard Internal Links
               return (
                 <Link
                   key={link.href}
@@ -74,11 +72,14 @@ export default function Navbar() {
                   className={getDesktopLinkClasses(isActive)}
                 >
                   {link.name}
-                  {isActive && <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 bg-foreground rounded-full" />}
+                  {isActive && (
+                    <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 bg-foreground rounded-full" />
+                  )}
                 </Link>
               );
             })}
-            <button 
+
+            <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className="ml-4 pl-4 border-l border-white/10 text-zinc-500 hover:text-foreground transition-colors"
             >
@@ -86,24 +87,36 @@ export default function Navbar() {
             </button>
           </div>
 
-          {/* Mobile Toggle */}
-          <div className="md:hidden">
-            <button 
-              onClick={() => setIsOpen(!isOpen)}
-              className="relative z-50 w-6 h-6 flex flex-col justify-center items-center gap-1.5 focus:outline-none"
+          {/* MOBILE NAV CONTROLS */}
+          <div className="md:hidden flex items-center gap-5">
+            
+            {/* Mobile Theme Toggle (Icon Only) */}
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="text-zinc-500 hover:text-foreground transition-colors"
+              aria-label="Toggle Theme"
             >
-              <span className={`h-[1.5px] w-5 bg-foreground transition-all duration-300 ${isOpen ? "rotate-45 translate-y-[4px]" : ""}`} />
-              <span className={`h-[1.5px] w-5 bg-foreground transition-all duration-300 ${isOpen ? "opacity-0" : ""}`} />
-              <span className={`h-[1.5px] w-5 bg-foreground transition-all duration-300 ${isOpen ? "-rotate-45 -translate-y-[4px]" : ""}`} />
+              {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+
+            {/* Hamburger Menu */}
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="relative z-50 w-6 h-6 flex flex-col justify-center items-center gap-1.5"
+            >
+              <span className={`h-[1.5px] w-5 bg-foreground transition-all ${isOpen ? "rotate-45 translate-y-[4px]" : ""}`} />
+              <span className={`h-[1.5px] w-5 bg-foreground transition-all ${isOpen ? "opacity-0" : ""}`} />
+              <span className={`h-[1.5px] w-5 bg-foreground transition-all ${isOpen ? "-rotate-45 -translate-y-[4px]" : ""}`} />
             </button>
           </div>
+
         </div>
       </div>
 
-      {/* 2. MOBILE OVERLAY */}
+      {/* MOBILE OVERLAY */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -111,50 +124,35 @@ export default function Navbar() {
           >
             <div className="flex flex-col h-full pt-32 px-10">
               <div className="flex flex-col gap-8">
+
+                {/* Mobile Home — Hard Reload */}
+                <a
+                  href="/"
+                  onClick={() => setIsOpen(false)}
+                  className={`text-3xl font-bold tracking-tighter ${
+                    pathname === "/" ? "text-foreground" : "text-zinc-400"
+                  }`}
+                >
+                  Home
+                </a>
+
                 {links.map((link) => {
                   const isActive = pathname === link.href;
-                  
-                  // Mobile: External Links & Home (Anchor Tag)
-                  if (link.isExternal || link.name === "Home") {
-                    return (
-                      <a
-                        key={link.href}
-                        href={link.href}
-                        target={link.isExternal ? "_blank" : undefined}
-                        rel={link.isExternal ? "noopener noreferrer" : undefined}
-                        onClick={() => setIsOpen(false)} // Close menu even on external click
-                        className={`text-3xl font-bold tracking-tighter ${isActive ? "text-foreground" : "text-zinc-400"}`}
-                      >
-                        {link.name}
-                      </a>
-                    );
-                  }
 
-                  // Mobile: Other Links (Next.js Link)
                   return (
                     <Link
                       key={link.href}
                       href={link.href}
                       onClick={() => setIsOpen(false)}
-                      className={`text-3xl font-bold tracking-tighter ${isActive ? "text-foreground" : "text-zinc-400"}`}
+                      className={`text-3xl font-bold tracking-tighter ${
+                        isActive ? "text-foreground" : "text-zinc-400"
+                      }`}
                     >
                       {link.name}
                     </Link>
                   );
                 })}
-                
-                {/* Mobile Theme Toggle */}
-                <button 
-                  onClick={toggleTheme}
-                  className="flex items-center gap-4 pt-4 text-zinc-400"
-                >
-                  <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center">
-                    {theme === "dark" ? <Sun size={20} className="text-yellow-500" /> : <Moon size={20} />}
-                  </div>
-                  <span className="text-lg font-medium tracking-tight">
-                    {theme === "dark" ? "Light Mode" : "Dark Mode"}
-                  </span>
-                </button>
+
               </div>
             </div>
           </motion.div>

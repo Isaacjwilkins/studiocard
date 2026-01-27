@@ -25,31 +25,37 @@ const PIANO_MAP = [
     { x: 0.25, y: 0.23 },
     { x: 0.25, y: 0.28 },
     { x: 0.25, y: 0.80 }
-  ];
-
-  
+];
 
 export default function Background() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const pianoModeRef = useRef(false); // START WITH FLOW (false), NOT PIANO
+    const pianoModeRef = useRef(false); 
     const scrollRef = useRef(0);
+    // Track previous scroll to avoid unnecessary DOM updates
+    const prevScrollProgress = useRef(-1);
 
     useEffect(() => {
-        // 1. Swap every 8 seconds
-        const interval = setInterval(() => {
+        // Start on swirls
+        pianoModeRef.current = false;
+      
+        // Switch to piano after 2 seconds
+        const initialTimeout = setTimeout(() => {
+          pianoModeRef.current = true;
+      
+          // Then start the 8 second interval
+          const interval = setInterval(() => {
             pianoModeRef.current = !pianoModeRef.current;
-        }, 8000);
-
-        // 2. Parallax and Color Scroll Logic
+          }, 8000);
+      
+          return () => clearInterval(interval);
+        }, 2000);
+      
+        return () => clearTimeout(initialTimeout);
+      
+      
+        // 2. Optimized Scroll Listener
         const handleScroll = () => {
-            const scrollY = window.scrollY;
-            const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-            const progress = Math.min(scrollY / (maxScroll || 1), 1);
-
-            scrollRef.current = scrollY;
-
-            // We use 0.5 to keep the color transition subtle and desaturated
-            document.documentElement.style.setProperty('--scroll-progress', (progress * 0.5).toString());
+            scrollRef.current = window.scrollY;
         };
 
         window.addEventListener("scroll", handleScroll, { passive: true });
@@ -64,7 +70,6 @@ export default function Background() {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        // Alpha true is necessary to see the sunset layer behind the canvas
         const ctx = canvas.getContext("2d", { alpha: true });
         if (!ctx) return;
 
@@ -73,19 +78,23 @@ export default function Background() {
         let height = canvas.height = window.innerHeight;
         let time = 0;
         let animationFrameId: number;
+        
+        // Track width to prevent reset on mobile URL bar scroll
+        let prevWidth = window.innerWidth;
 
         const getSegments = (w: number, h: number, scrollY: number) => {
-            const s = Math.min(w, h) * 0.75;
+            // DETECT MOBILE: If width is small (< 768px), use a smaller scale factor
+            const isMobile = w < 768;
+            const scaleFactor = isMobile ? 0.55 : 0.75;
+
+            const s = Math.min(w, h) * scaleFactor;
             const cx = w / 2;
 
-            // 1. Determine when the drop should start (Halfway down the document)
+            // Determine when the drop should start (82% down the page)
             const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-            const triggerPoint = maxScroll * 0.82; // Change 0.5 to 0.3 or 0.7 to adjust timing
+            const triggerPoint = maxScroll * 0.82; 
 
-            // 2. Calculate the drop distance only AFTER the trigger point is hit
             const scrollPastTrigger = Math.max(0, scrollY - triggerPoint);
-
-            // 3. Apply the multiplier (0.5 makes it drop faster once it finally starts)
             const cy = (h / 2) + (scrollPastTrigger * 0.5);
 
             const project = (pt: { x: number; y: number }) => ({
@@ -160,22 +169,35 @@ export default function Background() {
             draw() {
                 if (!ctx) return;
                 ctx.globalAlpha = Math.max(0, Math.min(this.opacity, 0.4));
-                // Saturation at 5% for a somber, cinematic "Slate" dot color
                 ctx.fillStyle = `hsl(${this.hue}, 5%, 50%)`;
                 ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.size, this.size);
             }
         }
 
         const init = () => {
-            particles = Array.from({ length: 3000 }, () => new Particle());
+            const isMobile = window.innerWidth < 768;
+            const particleCount = isMobile ? 1200 : 3000;
+            particles = Array.from({ length: particleCount }, () => new Particle());
         };
+
+        const updateScrollColors = () => {
+            const scrollY = scrollRef.current;
+            const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+            const rawProgress = Math.min(scrollY / (maxScroll || 1), 1);
+            const progress = rawProgress * 0.5;
+
+            if (Math.abs(progress - prevScrollProgress.current) > 0.001) {
+                document.documentElement.style.setProperty('--scroll-progress', progress.toString());
+                prevScrollProgress.current = progress;
+            }
+        }
 
         const animate = () => {
             time++;
+            updateScrollColors();
+
             const segments = getSegments(width, height, scrollRef.current);
 
-            // CLEARING WITH TRANSPARENCY
-            // This allows the sunset-layer underneath to be visible
             ctx.globalCompositeOperation = 'destination-out';
             ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
             ctx.fillRect(0, 0, width, height);
@@ -192,6 +214,13 @@ export default function Background() {
         animate();
 
         const handleResize = () => {
+            const newWidth = window.innerWidth;
+            
+            // KEY FIX: Only reset animation if WIDTH changes.
+            // This ignores the URL bar collapse/expand on mobile scroll.
+            if (newWidth === prevWidth) return;
+
+            prevWidth = newWidth;
             width = canvas.width = window.innerWidth;
             height = canvas.height = window.innerHeight;
             init();
@@ -206,13 +235,8 @@ export default function Background() {
 
     return (
         <>
-            {/* SOLID BASE LAYER */}
             <div className="fixed inset-0 bg-background -z-30" />
-
-            {/* DYNAMIC SUNSET LAYER (FADES IN ON SCROLL) */}
             <div className="sunset-layer" aria-hidden="true" />
-
-            {/* PARTICLE LAYER */}
             <canvas ref={canvasRef} className="fixed top-0 left-0 w-full h-full -z-10" />
         </>
     );

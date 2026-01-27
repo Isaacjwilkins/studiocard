@@ -14,9 +14,6 @@ export default function Footer() {
             <a href="https://linkedin.com/in/isaacjwilkins" className="text-zinc-500 hover:text-foreground transition-all hover:scale-110" aria-label="LinkedIn">
               <Linkedin size={14} strokeWidth={2} />
             </a>
-            <a href="https://linkedin.com/in/isaacjwilkins" className="text-zinc-500 hover:text-foreground transition-all hover:scale-110" aria-label="GitHub">
-              <Github size={14} strokeWidth={2} />
-            </a>
             <a href="https://linkedin.com/in/isaacjwilkins" className="text-zinc-500 hover:text-foreground transition-all hover:scale-110" aria-label="Instagram">
               <Instagram size={14} strokeWidth={2} />
             </a>
@@ -30,7 +27,7 @@ export default function Footer() {
 
           {/* Copyright: Subordinate and clean */}
           <span className="text-[8px] font-black uppercase tracking-[0.5em] text-zinc-400 dark:text-zinc-500 opacity-70">
-            &copy; 2026 Isaac Wilkins
+            &copy; 2026 Wilkins Studio
           </span>
           
         </div>
