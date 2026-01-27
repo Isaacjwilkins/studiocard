@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #000000;
+  
+  /* Muted & Somber Sunset */
+  --sunset-1: #1e293b; /* Muted Slate */
+  --sunset-2: #4c0519; /* Deep Wine */
+  --sunset-3: #78350f; /* Burned Gold */
+  
+  --scroll-progress: 0;
+}
+
+.sunset-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -20;
+  background: linear-gradient(180deg, var(--sunset-1), var(--sunset-2), var(--sunset-3));
+  opacity: var(--scroll-progress);
+  pointer-events: none;
+  transition: opacity 0.3s ease-out;
+}
+
+
+.dark {
+  --background: #000000;
+  --foreground: #ffffff;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  overflow-x: hidden;
+}
+
