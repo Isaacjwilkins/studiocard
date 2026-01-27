@@ -94,13 +94,22 @@ export default function Home() {
 
       {/* 1. Title Section */}
       <section className="relative w-full h-[85vh] flex flex-col items-center justify-center text-center px-6">
-        <div className="space-y-6 z-10">
+        <div className="space-y-4 z-10">
           <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-zinc-500 dark:text-zinc-400">
             Welcome to
           </h2>
-          <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-foreground">
-            Wilkins Studio
+
+          {/* Brand + LIVE on one line */}
+          <h1 className="flex items-baseline justify-center gap-4 text-6xl md:text-8xl font-black tracking-tighter text-foreground">
+            <span className="text-5xl md:text-7xl font-black">
+              studio<span className="text-red-500/80 dark:text-red-400">.</span>card
+            </span>
+
+            <span className="bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-400 bg-clip-text text-transparent">
+              LIVE
+            </span>
           </h1>
+
           <p className="text-xl md:text-2xl text-zinc-700 dark:text-zinc-300 font-light max-w-2xl mx-auto leading-relaxed">
             Walk in, walk out. Total production, to your own personal brand.
           </p>
@@ -147,8 +156,7 @@ export default function Home() {
               We made it <span className="text-red-500/80 dark:text-red-400">way better</span>.
             </h3>
             <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-              Booking a commercial studio costs hundreds of dollars an hour. Buying your own microphones and interface takes time to learn and money to burn.
-              <br /><br />
+              studio.card Live links directly to your studio.card profile, easily distributing your music online for free.               <br /><br />
               Most musicians just want to capture their sound without the headache.
             </p>
             <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-md mx-auto">
@@ -160,32 +168,46 @@ export default function Home() {
       </section>
 
 
+
+
+
       {/* 2.5 The Product Visuals (Grid of 3) */}
-      <section className="w-full max-w-7xl px-6 mb-18 flex flex-col items-center">
+      <section className="w-full max-w-7xl px-6 -mb-24 md:mb-18 flex flex-col items-center">
+
+        {/* CUSTOM ANIMATION STYLE */}
+        <style jsx>{`
+          @keyframes shimmer {
+            0% { transform: translateX(-150%) skewX(-12deg); }
+            100% { transform: translateX(150%) skewX(-12deg); }
+          }
+          .animate-shimmer {
+            animation: shimmer 4s infinite linear;
+          }
+        `}</style>
 
 
         {/* GRID CONTAINER - 3 MOCK CARDS */}
-        {/* Added pb-24 to container to prevent bottom cut-off on mobile */}
-        <div className="flex flex-col md:grid md:grid-cols-3 md:gap-8 w-full items-center px-4 md:px-0 pb-24 md:pb-0">
+        {/* Adjusted padding: pb-20 on mobile to hold the stack, 0 on desktop */}
+        <div className="flex flex-col md:grid md:grid-cols-3 md:gap-8 w-full items-center px-4 md:px-0 pb-20 md:pb-0">
 
           {MOCK_ARTISTS.map((artist, i) => (
             <div
               key={i}
               className={`
                   relative w-full aspect-[4/5] rounded-2xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-black shadow-2xl overflow-hidden 
-                  transition-all duration-500 ease-out
+                  transition-all duration-500 ease-out group
                   
                   /* INTERACTION: Tap/Hover brings to front & lifts */
                   hover:-translate-y-6 hover:z-50 hover:shadow-3xl hover:scale-[1.02]
 
                   /* MOBILE "CENTERED STACK" LOGIC */
-                  /* Card 1: Base (Back of stack) */
+                  /* Card 1 */
                   ${i === 0 ? 'z-10' : ''} 
                   
-                  /* Card 2: Pull up 85% to cover Card 1, sit on top (z-20) */
+                  /* Card 2: Pull up 85% */
                   ${i === 1 ? '-mt-[85%] md:mt-0 z-20' : ''} 
                   
-                  /* Card 3: Pull up 85% to cover Card 2, sit on top (z-30) */
+                  /* Card 3: Pull up 85% */
                   ${i === 2 ? '-mt-[85%] md:mt-0 z-30' : ''}
 
                   /* DESKTOP RESET */
@@ -193,6 +215,13 @@ export default function Home() {
                   ${i === 1 ? 'md:-translate-y-12 md:z-10' : ''}
                 `}
             >
+
+              {/* --- NEW: SUBTLE SHIMMER OVERLAY --- */}
+              {/* Pointer-events-none ensures it doesn't block clicks. via-white/5 makes it very subtle. */}
+              <div className="absolute inset-0 z-40 pointer-events-none">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 dark:via-white/5 to-transparent animate-shimmer" />
+              </div>
+
               {/* 1. Browser Header */}
               <div className="h-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center px-4 bg-zinc-50/50 dark:bg-zinc-900/50 z-20 relative">
                 <div className="flex gap-1.5">
@@ -240,7 +269,7 @@ export default function Home() {
                     {artist.premium && (
                       <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5">
                         <Star className="text-amber-500 fill-amber-500" size={8} />
-                        <span className="text-[8px] font-bold uppercase tracking-wider text-foreground/70">Premium</span>
+                        <span className="text-[8px] font-bold uppercase tracking-wider text-foreground/70">Pro</span>
                       </div>
                     )}
                   </div>
@@ -278,7 +307,6 @@ export default function Home() {
 
         </div>
       </section>
-
 
       {/* 4. Pricing Module (Teaser) */}
       <section className="w-full bg-zinc-50/50 dark:bg-white/5 border-y border-zinc-200 dark:border-white/5 backdrop-blur-sm py-12 px-6">
