@@ -1,7 +1,7 @@
 "use client";
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import Image from 'next/image';
+import { Mail, MessageSquare, HelpCircle, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
 
 export default function ConnectPage() {
   const [loading, setLoading] = useState(false);
@@ -11,107 +11,154 @@ export default function ConnectPage() {
     e.preventDefault();
     setLoading(true);
     const formData = new FormData(e.currentTarget);
+    
+    // We stick to the existing 'contact_inquiries' table
     const { error } = await supabase.from('contact_inquiries').insert([{
       full_name: formData.get('full_name'),
       email: formData.get('email'),
       inquiry_type: formData.get('inquiry_type'),
       message: formData.get('message'),
     }]);
-    if (!error) setSuccess(true);
+
+    if (!error) {
+        setSuccess(true);
+    } else {
+        console.error(error); // Basic error logging
+    }
     setLoading(false);
   }
 
   return (
-    <main className="max-w-4xl mx-auto pt-32 pb-20 px-6">
-      {/* Header Section */}
-      <section className="mb-24 space-y-6">
-        <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">Let's create something</h2>
-        <h3 className="text-4xl font-semibold text-foreground">Connect with me below.</h3>
-        <div className="text-zinc-700 dark:text-zinc-300 max-w-2xl text-lg leading-relaxed">
-          <p>Whether you're interested in private piano instruction, commissioning a custom arrangement, or simply sharing a thought—I'd love to hear from you!</p>
+    <main className="min-h-screen pt-32 pb-20 px-6 max-w-5xl mx-auto">
+      
+      {/* HEADER */}
+      <section className="mb-20 text-center space-y-6">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-xs font-bold uppercase tracking-widest text-zinc-500">
+           <Mail size={12} /> Contact Us
         </div>
+        <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-foreground">
+          Let's get in touch.
+        </h1>
+        <p className="text-xl text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto leading-relaxed">
+          Have questions about the platform? Need help setting up your teacher dashboard? We are here to help.
+        </p>
       </section>
 
-      {/* Glassmorphism Form Container */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/10 dark:border-white/5 bg-white/40 dark:bg-black/40 backdrop-blur-xl p-8 md:p-12 shadow-2xl transition-all">
-        {success ? (
-          <div className="py-20 text-center space-y-4 animate-in fade-in zoom-in duration-500">
-             <span className="text-xs font-black uppercase tracking-[0.3em] text-foreground/50">
-              Sent Successfully
-            </span>
-            <h4 className="text-3xl font-bold tracking-tight text-foreground">Message Received.</h4>
-            <p className="text-zinc-700 dark:text-zinc-300 max-w-sm mx-auto">
-              Thank you for reaching out. I usually respond within 48 hours.
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="relative z-10 space-y-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              <div className="space-y-3">
-                <label className="text-xs font-black uppercase tracking-[0.3em] text-foreground/50">Full Name</label>
-                <input name="full_name" required placeholder="Isaac Wilkins" className="w-full bg-transparent border-b-2 border-zinc-300 dark:border-zinc-800 py-3 text-foreground focus:border-foreground outline-none transition-colors placeholder:text-zinc-600/30" />
-              </div>
-              <div className="space-y-3">
-                <label className="text-xs font-black uppercase tracking-[0.3em] text-foreground/50">Email Address</label>
-                <input name="email" type="email" required placeholder="hello@example.com" className="w-full bg-transparent border-b-2 border-zinc-300 dark:border-zinc-800 py-3 text-foreground focus:border-foreground outline-none transition-colors placeholder:text-zinc-600/30" />
-              </div>
+      {/* GRID LAYOUT: Contact Info + Form */}
+      <div className="grid md:grid-cols-12 gap-12">
+        
+        {/* LEFT: Context / Info */}
+        <div className="md:col-span-4 space-y-8">
+            <div className="p-8 rounded-3xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/10">
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                    <HelpCircle size={20} className="text-blue-500" /> Support
+                </h3>
+                <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed mb-6">
+                    For technical issues or account help, please select "Technical Support" in the form. We usually respond within 24 hours.
+                </p>
+                <div className="h-px w-full bg-zinc-200 dark:bg-white/10 mb-6" />
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                    <MessageSquare size={20} className="text-green-500" /> Sales
+                </h3>
+                <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
+                    <strong>For Music Schools:</strong> If you are looking to onboard more than 5 teachers, contact us for bulk pricing.
+                </p>
             </div>
-            {/* ... other form fields using text-foreground for visibility ... */}
-            <div className="space-y-3">
-              <label className="text-xs font-black uppercase tracking-[0.3em] text-foreground/50">Topic</label>
-              <select name="inquiry_type" className="w-full bg-transparent border-b-2 border-zinc-300 dark:border-zinc-800 py-3 text-foreground focus:border-foreground outline-none transition-colors cursor-pointer">
-                <option className="bg-white dark:bg-zinc-900">General Inquiry</option>
-                <option className="bg-white dark:bg-zinc-900">Piano Lessons</option>
-                <option className="bg-white dark:bg-zinc-900">Arrangement Commission</option>
-              </select>
+            
+            <div className="p-6 rounded-3xl bg-blue-500 text-white shadow-xl shadow-blue-500/20">
+                <h4 className="font-bold text-lg mb-2">Join the Community</h4>
+                <p className="text-blue-100 text-sm mb-4">Follow us for updates on new features and featured students.</p>
+                <div className="flex gap-4 opacity-80">
+                    <span className="text-xs font-bold uppercase tracking-widest">@studiocard</span>
+                </div>
             </div>
-            <div className="space-y-3">
-              <label className="text-xs font-black uppercase tracking-[0.3em] text-foreground/50">Message</label>
-              <textarea name="message" rows={4} required placeholder="How can I help?" className="w-full bg-white/5 dark:bg-black/20 border border-zinc-300 dark:border-zinc-800 p-6 rounded-xl text-foreground focus:border-foreground outline-none transition-all resize-none placeholder:text-zinc-600/30" />
+        </div>
+
+        {/* RIGHT: The Form */}
+        <div className="md:col-span-8">
+            <div className="relative overflow-hidden rounded-[2.5rem] border border-zinc-200 dark:border-white/10 bg-white/50 dark:bg-black/40 backdrop-blur-xl p-8 md:p-12 shadow-2xl">
+                {success ? (
+                <div className="py-24 text-center space-y-6 animate-in fade-in zoom-in duration-500">
+                    <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full flex items-center justify-center mx-auto">
+                        <CheckCircle2 size={40} />
+                    </div>
+                    <h4 className="text-3xl font-black tracking-tight text-foreground">Message Sent!</h4>
+                    <p className="text-zinc-600 dark:text-zinc-400 max-w-sm mx-auto">
+                        Thanks for reaching out. We've received your inquiry and will get back to you shortly.
+                    </p>
+                    <button onClick={() => setSuccess(false)} className="text-sm font-bold underline decoration-2 underline-offset-4 decoration-zinc-300 hover:decoration-foreground transition-all">
+                        Send another message
+                    </button>
+                </div>
+                ) : (
+                <form onSubmit={handleSubmit} className="space-y-8">
+                    
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-3">Full Name</label>
+                            <input 
+                                name="full_name" 
+                                required 
+                                placeholder="Jane Doe" 
+                                className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl py-4 px-4 font-medium text-foreground focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-3">Email Address</label>
+                            <input 
+                                name="email" 
+                                type="email" 
+                                required 
+                                placeholder="jane@studio.com" 
+                                className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl py-4 px-4 font-medium text-foreground focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-3">I need help with...</label>
+                        <div className="relative">
+                            <select 
+                                name="inquiry_type" 
+                                className="w-full appearance-none bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl py-4 px-4 font-medium text-foreground focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer"
+                            >
+                                <option value="Teacher Inquiry">Teacher Account Inquiry</option>
+                                <option value="School Pricing">School / Bulk Pricing</option>
+                                <option value="Support">Technical Support</option>
+                                <option value="General">General Question</option>
+                                <option value="Bug">Report a Bug</option>
+                            </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
+                                <ArrowRight size={16} className="rotate-90" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-3">Message</label>
+                        <textarea 
+                            name="message" 
+                            rows={5} 
+                            required 
+                            placeholder="Tell us a bit more about what you need..." 
+                            className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl p-4 font-medium text-foreground focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none" 
+                        />
+                    </div>
+
+                    <div className="pt-2">
+                        <button 
+                            disabled={loading} 
+                            className="w-full py-4 rounded-xl bg-foreground text-background font-black text-xs uppercase tracking-[0.2em] hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                            {loading ? <Loader2 className="animate-spin" /> : "Send Message"}
+                        </button>
+                    </div>
+
+                </form>
+                )}
             </div>
-            <div className="flex justify-end pt-4">
-              <button disabled={loading} className="group relative flex items-center gap-4 text-sm font-black uppercase tracking-[0.2em] border-b-2 border-foreground pb-1 text-foreground hover:opacity-50 transition-all disabled:opacity-30">
-                {loading ? "Sending..." : "Send Inquiry"}
-                <span className="group-hover:translate-x-1 transition-transform">→</span>
-              </button>
-            </div>
-          </form>
-        )}
+        </div>
       </div>
-
-      {/* REFINED: Editorial Profile Section */}
-      <section className="mt-40 grid grid-cols-1 md:grid-cols-12 gap-12 items-start">
-        {/* Text Column */}
-        <div className="md:col-span-7 space-y-8">
-          <div className="space-y-2">
-            <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-zinc-400">About Me</h2>
-            <h3 className="text-4xl font-semibold tracking-tight text-foreground">Isaac Wilkins</h3>
-          </div>
-          
-          <div className="space-y-6 text-lg leading-relaxed text-zinc-800 dark:text-zinc-200">
-            <p>
-            Based in Provo, UT, Isaac is a composer and pianist focused primarily on solo arrangements. He began learning piano over 16 years ago, where he was classically trained and competed in national competitions for several years. He currently teaches several students, including as a volunteer for children at SFCC of United Way Provo.
-            </p>
-            <p>
-            Beyond the piano, Isaac is a public health and economics student at BYU pursuing a career in medicine. His work in healthcare has included research and advocacy efforts across several institutions, including the Marriott School, Harvard Medical School, and Mass General Hospital. 
-            </p>
-          </div>
-        </div>
-
-        {/* Image Column */}
-        <div className="md:col-span-5">
-          <div className="relative aspect-[4/6] w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl transition-all duration-700">
-            <Image
-              src="/profile.png"
-              alt="Isaac Wilkins"
-              fill
-              className="object-cover"
-            />
-          </div>
-        </div>
-      </section>
-
-     
     </main>
   );
 }

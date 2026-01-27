@@ -27,7 +27,7 @@ export default function Footer() {
 
           {/* Copyright: Subordinate and clean */}
           <span className="text-[8px] font-black uppercase tracking-[0.5em] text-zinc-400 dark:text-zinc-500 opacity-70">
-            &copy; 2026 Wilkins Studio
+            &copy; 2026 studio<span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-red-400">.</span>card
           </span>
           
         </div>
