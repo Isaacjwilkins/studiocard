@@ -3,7 +3,46 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, ArrowDown } from 'lucide-react';
+import { ArrowRight, ArrowDown, Play, Pause, BadgeCheck, Star, Share2, Instagram, Youtube, Globe } from 'lucide-react';
+
+// --- MOCK DATA FOR HOMEPAGE CARDS ---
+const MOCK_ARTISTS = [
+  {
+    name: "Sarah Jenkins",
+    handle: "sarah-j",
+    color: "#ec4899", // Pink
+    track: "Summer Rain",
+    verified: true,
+    premium: false,
+    imageColor: "bg-pink-100",
+  },
+  {
+    name: "Marcus Davis",
+    handle: "marcus-jazz",
+    color: "#3b82f6", // Blue
+    track: "Midnight Improv",
+    verified: true,
+    premium: true,
+    imageColor: "bg-blue-100",
+  },
+  {
+    name: "Eliza Wright",
+    handle: "eliza-w",
+    color: "#10b981", // Emerald
+    track: "Etude No. 5",
+    verified: false,
+    premium: false,
+    imageColor: "bg-emerald-100",
+  }
+];
+
+// Helper for glass effect
+const hexToRgba = (hex: string, alpha: number) => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
 
 export default function Home() {
   // --- YouTube Logic (Preserved) ---
@@ -63,7 +102,7 @@ export default function Home() {
             Wilkins Studio
           </h1>
           <p className="text-xl md:text-2xl text-zinc-700 dark:text-zinc-300 font-light max-w-2xl mx-auto leading-relaxed">
-            Walk in, walk out. Total production to your own personal brand.
+            Walk in, walk out. Total production, to your own personal brand.
           </p>
         </div>
 
@@ -113,7 +152,7 @@ export default function Home() {
               Most musicians just want to capture their sound without the headache.
             </p>
             <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-md mx-auto">
-              More than just an audio file. You get a permanent digital stage.
+              More than just an audio file. You get a permanent digital stage. And your card stays online, forever, for free. Yep.
             </p>
           </div>
 
@@ -125,80 +164,121 @@ export default function Home() {
       <section className="w-full max-w-7xl px-6 mb-18 flex flex-col items-center">
 
 
-        {/* Grid Container */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
+        {/* GRID CONTAINER - 3 MOCK CARDS */}
+        {/* Added pb-24 to container to prevent bottom cut-off on mobile */}
+        <div className="flex flex-col md:grid md:grid-cols-3 md:gap-8 w-full items-center px-4 md:px-0 pb-24 md:pb-0">
 
-          {/* Card 1 */}
-          <div className="relative w-full aspect-[4/5] rounded-2xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-black shadow-2xl overflow-hidden hover:-translate-y-2 transition-transform duration-700 group">
-            <div className="h-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center px-4 bg-zinc-50/50 dark:bg-zinc-900/50">
-              <div className="flex gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-red-400" />
-                <div className="w-2 h-2 rounded-full bg-yellow-400" />
-                <div className="w-2 h-2 rounded-full bg-green-400" />
-              </div>
-            </div>
-            <div className="p-6 flex flex-col items-center pt-8 space-y-3">
-              <div className="w-20 h-20 rounded-full bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
-              <div className="h-3 w-1/2 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" />
-              <div className="w-full mt-6 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center text-background">
-                  <div className="w-0 h-0 border-l-[6px] border-l-current border-y-[4px] border-y-transparent ml-0.5" />
-                </div>
-                <div className="flex-1 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                  <div className="h-full w-1/3 bg-foreground/20" />
-                </div>
-              </div>
-            </div>
-          </div>
+          {MOCK_ARTISTS.map((artist, i) => (
+            <div
+              key={i}
+              className={`
+                  relative w-full aspect-[4/5] rounded-2xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-black shadow-2xl overflow-hidden 
+                  transition-all duration-500 ease-out
+                  
+                  /* INTERACTION: Tap/Hover brings to front & lifts */
+                  hover:-translate-y-6 hover:z-50 hover:shadow-3xl hover:scale-[1.02]
 
-          {/* Card 2 */}
-          <div className="hidden md:block relative w-full aspect-[4/5] rounded-2xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-black shadow-2xl overflow-hidden hover:-translate-y-2 transition-transform duration-700 group delay-75">
-            <div className="h-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center px-4 bg-zinc-50/50 dark:bg-zinc-900/50">
-              <div className="flex gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-red-400" />
-                <div className="w-2 h-2 rounded-full bg-yellow-400" />
-                <div className="w-2 h-2 rounded-full bg-green-400" />
-              </div>
-            </div>
-            <div className="p-6 flex flex-col items-center pt-8 space-y-3">
-              <div className="w-20 h-20 rounded-full bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
-              <div className="h-3 w-1/2 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" />
-              <div className="w-full mt-6 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center text-background">
-                  <div className="w-0 h-0 border-l-[6px] border-l-current border-y-[4px] border-y-transparent ml-0.5" />
-                </div>
-                <div className="flex-1 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                  <div className="h-full w-2/3 bg-foreground/20" />
-                </div>
-              </div>
-            </div>
-          </div>
+                  /* MOBILE "CENTERED STACK" LOGIC */
+                  /* Card 1: Base (Back of stack) */
+                  ${i === 0 ? 'z-10' : ''} 
+                  
+                  /* Card 2: Pull up 85% to cover Card 1, sit on top (z-20) */
+                  ${i === 1 ? '-mt-[85%] md:mt-0 z-20' : ''} 
+                  
+                  /* Card 3: Pull up 85% to cover Card 2, sit on top (z-30) */
+                  ${i === 2 ? '-mt-[85%] md:mt-0 z-30' : ''}
 
-          {/* Card 3 */}
-          <div className="hidden md:block relative w-full aspect-[4/5] rounded-2xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-black shadow-2xl overflow-hidden hover:-translate-y-2 transition-transform duration-700 group delay-150">
-            <div className="h-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center px-4 bg-zinc-50/50 dark:bg-zinc-900/50">
-              <div className="flex gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-red-400" />
-                <div className="w-2 h-2 rounded-full bg-yellow-400" />
-                <div className="w-2 h-2 rounded-full bg-green-400" />
-              </div>
-            </div>
-            <div className="p-6 flex flex-col items-center pt-8 space-y-3">
-              <div className="w-20 h-20 rounded-full bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
-              <div className="h-3 w-1/2 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" />
-              <div className="w-full mt-6 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center text-background">
-                  <div className="w-0 h-0 border-l-[6px] border-l-current border-y-[4px] border-y-transparent ml-0.5" />
+                  /* DESKTOP RESET */
+                  md:translate-y-0 md:z-0
+                  ${i === 1 ? 'md:-translate-y-12 md:z-10' : ''}
+                `}
+            >
+              {/* 1. Browser Header */}
+              <div className="h-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center px-4 bg-zinc-50/50 dark:bg-zinc-900/50 z-20 relative">
+                <div className="flex gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-red-400" />
+                  <div className="w-2 h-2 rounded-full bg-yellow-400" />
+                  <div className="w-2 h-2 rounded-full bg-green-400" />
                 </div>
-                <div className="flex-1 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                  <div className="h-full w-1/2 bg-foreground/20" />
+                <div className="ml-3 text-[8px] text-zinc-400 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
+                  wilkinstudio.com/{artist.handle}
                 </div>
               </div>
+
+              {/* 2. Browser Body */}
+              <div className="relative w-full h-full p-4 md:p-6 flex items-center justify-center">
+
+                {/* Page Background */}
+                <div className="absolute inset-0 bg-gradient-to-b from-zinc-100/50 to-white dark:from-zinc-900/50 dark:to-black z-0" />
+
+                {/* 3. The Mini Artist Card */}
+                <div
+                  className="relative z-10 w-full backdrop-blur-md rounded-[2rem] p-6 shadow-xl flex flex-col items-center text-center border transition-all"
+                  style={{
+                    backgroundColor: hexToRgba(artist.color, 0.4),
+                    borderColor: hexToRgba(artist.color, 0.2)
+                  }}
+                >
+                  {/* Photo */}
+                  <div className={`w-24 h-24 rounded-full ${artist.imageColor} mb-3 relative overflow-hidden shadow-2xl border-4 border-white/10`}>
+                    <div className="absolute inset-0 bg-gradient-to-tr from-black/10 to-transparent" />
+                  </div>
+
+                  {/* Caption */}
+                  <div className="text-[10px] font-medium text-foreground/70 mb-2 leading-tight px-2">
+                    "Creating moments in time through sound."
+                  </div>
+
+                  {/* Badges */}
+                  <div className="flex items-center justify-center gap-1.5 mb-4">
+                    {artist.verified && (
+                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5">
+                        <BadgeCheck className="text-blue-500" size={10} strokeWidth={3} />
+                        <span className="text-[8px] font-bold uppercase tracking-wider text-foreground/70">Verified</span>
+                      </div>
+                    )}
+                    {artist.premium && (
+                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5">
+                        <Star className="text-amber-500 fill-amber-500" size={8} />
+                        <span className="text-[8px] font-bold uppercase tracking-wider text-foreground/70">Premium</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Share Button (Visual) */}
+                  <div className="w-full py-2 mb-3 rounded-lg bg-foreground text-background text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-md opacity-90">
+                    <Share2 size={10} /> Share Profile
+                  </div>
+
+                  {/* Social Icons Row */}
+                  <div className="flex gap-2 mb-4 opacity-60">
+                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center border border-white/5 shadow-sm" />
+                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center border border-white/5 shadow-sm" />
+                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center border border-white/5 shadow-sm" />
+                  </div>
+
+                  {/* Name */}
+                  <div className="font-black text-xl text-foreground tracking-tight mb-4">{artist.name}</div>
+
+                  {/* Track Row */}
+                  <div className="w-full bg-white/40 dark:bg-black/20 rounded-xl p-2 flex items-center gap-3 border border-white/10 shadow-sm">
+                    <div className="w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center shadow-md">
+                      <Play size={10} fill="currentColor" className="ml-0.5" />
+                    </div>
+                    <div className="text-left flex-1 min-w-0">
+                      <div className="font-bold text-xs truncate text-foreground">{artist.track}</div>
+                      <div className="text-[9px] text-foreground/60 truncate">2024 • Single</div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
             </div>
-          </div>
+          ))}
 
         </div>
       </section>
+
 
       {/* 4. Pricing Module (Teaser) */}
       <section className="w-full bg-zinc-50/50 dark:bg-white/5 border-y border-zinc-200 dark:border-white/5 backdrop-blur-sm py-12 px-6">
