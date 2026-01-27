@@ -32,23 +32,22 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 w-full z-50">
-      {/* TOP BAR */}
       <div className="w-full border-b border-white/10 dark:border-white/5 bg-white/60 dark:bg-black/80 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
 
-          {/* LOGO */}
+          {/* LOGO - Hard Reset to Home */}
           <a href="/" className="hover:opacity-70 transition-opacity">
             <h1 className="text-xl md:text-2xl font-black tracking-tighter text-foreground">
               studio<span className="text-red-500/80 dark:text-red-400">.</span>card
             </h1>
           </a>
 
-          {/* DESKTOP NAV */}
           <div className="hidden md:flex items-center gap-8">
-
-            <Link href="/" className={getDesktopLinkClasses(pathname === "/")}>
+            
+            {/* HOME LINK - Changed from Link to <a> for Hard Reset */}
+            <a href="/" className={getDesktopLinkClasses(pathname === "/")}>
               Home
-            </Link>
+            </a>
 
             {mainLinks.map((link) => {
               const isActive = pathname === link.href;
@@ -62,7 +61,6 @@ export default function Navbar() {
               );
             })}
 
-            {/* MORE DROPDOWN */}
             <div
               className="relative"
               onMouseEnter={() => setIsMoreOpen(true)}
@@ -92,7 +90,7 @@ export default function Navbar() {
                               ? "text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950"
                               : "text-zinc-500 hover:text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-900"
                             }`}
-                                                  >
+                        >
                           {link.name} <ExternalLink size={10} />
                         </a>
                       ) : (
@@ -118,7 +116,6 @@ export default function Navbar() {
             </button>
           </div>
 
-          {/* MOBILE NAV CONTROLS */}
           <div className="md:hidden flex items-center gap-5">
             <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="text-zinc-500 hover:text-foreground">
               {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
@@ -132,7 +129,6 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* MOBILE OVERLAY */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -143,7 +139,11 @@ export default function Navbar() {
           >
             <div className="flex flex-col h-full pt-24 px-8 overflow-y-auto pb-10">
               <div className="flex flex-col gap-6">
-                <Link href="/" onClick={() => setIsOpen(false)} className={`text-4xl font-black tracking-tighter ${pathname === "/" ? "text-foreground" : "text-zinc-400"}`}>Home</Link>
+                
+                {/* MOBILE HOME LINK - Hard Reset */}
+                <a href="/" onClick={() => setIsOpen(false)} className={`text-4xl font-black tracking-tighter ${pathname === "/" ? "text-foreground" : "text-zinc-400"}`}>
+                  Home
+                </a>
 
                 {mainLinks.map((link) => (
                   <Link key={link.href} href={link.href} onClick={() => setIsOpen(false)} className={`text-4xl font-black tracking-tighter ${pathname === link.href ? "text-foreground" : "text-zinc-400"}`}>
