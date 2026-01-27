@@ -336,7 +336,7 @@ export default function Home() {
         Demo
       </h2>
       <h3 className="text-4xl md:text-5xl font-black tracking-tighter flex items-center justify-center gap-3">
-        See it in Action <Video size={36} className="text-red-500" />
+        See it in Action 
       </h3>
     </div>
 
@@ -368,7 +368,7 @@ export default function Home() {
         onClick={() => setOpen(!open)}
         className="px-4 py-2 rounded-full border border-zinc-200 dark:border-white/10 bg-zinc-50/60 dark:bg-white/5 backdrop-blur-sm text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100/60 dark:hover:bg-white/10 transition"
       >
-        About The Founder {open ? "−" : "+"}
+        About Me {open ? "−" : "+"}
       </button>
     </div>
 
