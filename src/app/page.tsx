@@ -94,22 +94,9 @@ export default function Home() {
 
       {/* 1. Title Section */}
       <section className="relative w-full h-[85vh] flex flex-col items-center justify-center text-center px-6">
-        <div className="space-y-4 z-10">
-          <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-zinc-500 dark:text-zinc-400">
-            Welcome to
-          </h2>
-
-          {/* Brand + LIVE on one line */}
-          <h1 className="flex items-baseline justify-center gap-4 text-6xl md:text-8xl font-black tracking-tighter text-foreground">
-            <span className="text-5xl md:text-7xl font-black">
-              studio<span className="text-red-500/80 dark:text-red-400">.</span>card
-            </span>
-
-            <span className="bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-400 bg-clip-text text-transparent">
-              LIVE
-            </span>
-          </h1>
-
+        <div className="space-y-6 z-10">
+          <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-zinc-500 dark:text-zinc-400"> Welcome to </h2>
+          <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-foreground"> studio<span className="text-red-500/80 dark:text-red-400">.</span>card </h1>
           <p className="text-xl md:text-2xl text-zinc-700 dark:text-zinc-300 font-light max-w-2xl mx-auto leading-relaxed">
             Walk in, walk out. Total production, to your own personal brand.
           </p>

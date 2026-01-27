@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -30,22 +29,11 @@ export default function Navbar() {
       <div className="w-full border-b border-white/10 dark:border-white/5 bg-white/60 dark:bg-black/80 backdrop-blur-xl">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
 
-          {/* LOGO — Hard Reload */}
-          <a href="/" className="relative w-28 sm:w-32 h-8 hover:opacity-70 transition-opacity">
-            <Image
-              src="/newlogo.png"
-              alt="Logo"
-              fill
-              className="object-contain dark:hidden"
-              priority
-            />
-            <Image
-              src="/newlogow.png"
-              alt="Logo"
-              fill
-              className="object-contain hidden dark:block"
-              priority
-            />
+          {/* LOGO — Text Replacement */}
+          <a href="/" className="hover:opacity-70 transition-opacity">
+            <h1 className="text-xl md:text-2xl font-black tracking-tighter text-foreground">
+               studio<span className="text-red-500/80 dark:text-red-400">.</span>card
+            </h1>
           </a>
 
           {/* DESKTOP NAV */}
