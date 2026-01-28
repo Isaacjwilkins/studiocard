@@ -1,67 +1,80 @@
 "use client";
 import React, { useEffect, useRef } from "react";
 
-// YOUR REFINED MANUAL COORDINATES
+// EXISTING PIANO COORDINATES
 const PIANO_MAP = [
-    { x: 0.25, y: 0.80 },
-    { x: 0.75, y: 0.80 },
-    { x: 0.75, y: 0.60 },
-    { x: 0.74, y: 0.53 },
-    { x: 0.72, y: 0.48 },
-    { x: 0.70, y: 0.46 },
-    { x: 0.67, y: 0.44 },
-    { x: 0.64, y: 0.43 },
-    { x: 0.61, y: 0.42 },
-    { x: 0.59, y: 0.42 },
-    { x: 0.57, y: 0.42 },
-    { x: 0.54, y: 0.41 },
-    { x: 0.51, y: 0.36 },
-    { x: 0.49, y: 0.29 },
-    { x: 0.47, y: 0.23 },
-    { x: 0.45, y: 0.20 },
-    { x: 0.41, y: 0.19 },
-    { x: 0.32, y: 0.19 },
-    { x: 0.27, y: 0.20 },
-    { x: 0.25, y: 0.23 },
-    { x: 0.25, y: 0.28 },
-    { x: 0.25, y: 0.80 }
+    { x: 0.25, y: 0.80 }, { x: 0.75, y: 0.80 }, { x: 0.75, y: 0.60 }, { x: 0.74, y: 0.53 },
+    { x: 0.72, y: 0.48 }, { x: 0.70, y: 0.46 }, { x: 0.67, y: 0.44 }, { x: 0.64, y: 0.43 },
+    { x: 0.61, y: 0.42 }, { x: 0.59, y: 0.42 }, { x: 0.57, y: 0.42 }, { x: 0.54, y: 0.41 },
+    { x: 0.51, y: 0.36 }, { x: 0.49, y: 0.29 }, { x: 0.47, y: 0.23 }, { x: 0.45, y: 0.20 },
+    { x: 0.41, y: 0.19 }, { x: 0.32, y: 0.19 }, { x: 0.27, y: 0.20 }, { x: 0.25, y: 0.23 },
+    { x: 0.25, y: 0.28 }, { x: 0.25, y: 0.80 }
 ];
+
+// NEW GUITAR COORDINATES
+const GUITAR_MAP = [
+    { x: 0.16, y: 0.80 },
+    { x: 0.27, y: 0.87 },
+    { x: 0.39, y: 0.88 },
+    { x: 0.48, y: 0.76 },
+    { x: 0.45, y: 0.69 },
+    { x: 0.45, y: 0.66 },
+    { x: 0.51, y: 0.59 },
+    { x: 0.56, y: 0.58 },
+    { x: 0.62, y: 0.48 },
+    { x: 0.54, y: 0.37 },
+    { x: 0.76, y: 0.12 },
+    { x: 0.73, y: 0.09 },
+    { x: 0.50, y: 0.35 },
+    { x: 0.37, y: 0.33 },
+    { x: 0.30, y: 0.43 },
+    { x: 0.30, y: 0.48 },
+    { x: 0.30, y: 0.51 },
+    { x: 0.25, y: 0.58 },
+    { x: 0.22, y: 0.59 },
+    { x: 0.16, y: 0.60 },
+    { x: 0.11, y: 0.71 },
+    { x: 0.15, y: 0.80 }
+  ];
+
+type AppMode = "swirl" | "piano" | "guitar";
 
 export default function Background() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const pianoModeRef = useRef(false); 
+    const modeRef = useRef<AppMode>("swirl"); 
     const scrollRef = useRef(0);
-    // Track previous scroll to avoid unnecessary DOM updates
     const prevScrollProgress = useRef(-1);
 
-    const intervalRef = useRef<number | null>(null);
-    const timeoutRef = useRef<number | null>(null);
-
     useEffect(() => {
-        // Start on swirls
-        pianoModeRef.current = false;
-      
-        timeoutRef.current = window.setTimeout(() => {
-          pianoModeRef.current = true;
-      
-          intervalRef.current = window.setInterval(() => {
-            pianoModeRef.current = !pianoModeRef.current;
-          }, 8000);
+        // CYCLE LOGIC
+        // Sequence: piano -> swirl -> guitar -> swirl (repeat)
+        const sequence: AppMode[] = ["piano", "swirl", "guitar", "swirl"];
+        let currentIndex = 0;
+
+        // 1. Initial 2 second delay to start the first piano
+        const initialTimeout = setTimeout(() => {
+            modeRef.current = sequence[currentIndex];
+
+            // 2. Start the 6 second rotation cycle
+            const interval = setInterval(() => {
+                currentIndex = (currentIndex + 1) % sequence.length;
+                modeRef.current = sequence[currentIndex];
+            }, 6000);
+
+            return () => clearInterval(interval);
         }, 2000);
-      
+
         const handleScroll = () => {
-          scrollRef.current = window.scrollY;
+            scrollRef.current = window.scrollY;
         };
-      
+
         window.addEventListener("scroll", handleScroll, { passive: true });
-      
+
         return () => {
-          if (timeoutRef.current) clearTimeout(timeoutRef.current);
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          window.removeEventListener("scroll", handleScroll);
+            clearTimeout(initialTimeout);
+            window.removeEventListener("scroll", handleScroll);
         };
-      }, []);
-      
+    }, []);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -75,33 +88,34 @@ export default function Background() {
         let height = canvas.height = window.innerHeight;
         let time = 0;
         let animationFrameId: number;
-        
-        // Track width to prevent reset on mobile URL bar scroll
         let prevWidth = window.innerWidth;
 
         const getSegments = (w: number, h: number, scrollY: number) => {
-            // DETECT MOBILE: If width is small (< 768px), use a smaller scale factor
+            const currentMode = modeRef.current;
+            // If swirl, we don't need segments
+            if (currentMode === "swirl") return [];
+
             const isMobile = w < 768;
             const scaleFactor = isMobile ? 0.55 : 0.75;
-
             const s = Math.min(w, h) * scaleFactor;
             const cx = w / 2;
 
-            // Determine when the drop should start (82% down the page)
             const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
             const triggerPoint = maxScroll * 0.82; 
-
             const scrollPastTrigger = Math.max(0, scrollY - triggerPoint);
             const cy = (h / 2) + (scrollPastTrigger * 0.5);
+
+            // Select the map based on mode
+            const activeMap = currentMode === "piano" ? PIANO_MAP : GUITAR_MAP;
 
             const project = (pt: { x: number; y: number }) => ({
                 x: cx + (pt.x - 0.5) * s,
                 y: cy + (pt.y - 0.5) * s,
             });
 
-            return PIANO_MAP.slice(0, -1).map((pt, i) => ({
+            return activeMap.slice(0, -1).map((pt, i) => ({
                 a: project(pt),
-                b: project(PIANO_MAP[i + 1]),
+                b: project(activeMap[i + 1]),
             }));
         };
 
@@ -130,15 +144,17 @@ export default function Background() {
             }
 
             update(t: number, segments: any[]) {
-                const mode = pianoModeRef.current;
-                const zoom = mode ? 0.0015 : 0.0035;
+                const mode = modeRef.current;
+                const isMappingMode = mode !== "swirl";
+                
+                const zoom = isMappingMode ? 0.0015 : 0.0035;
                 const angle = (Math.sin(this.x * zoom + t * 0.0005) + Math.cos(this.y * zoom + t * 0.0005)) * Math.PI * 2;
-                const accel = mode ? 0.06 : 0.2;
+                const accel = isMappingMode ? 0.06 : 0.2;
 
                 this.vx += Math.cos(angle) * accel;
                 this.vy += Math.sin(angle) * accel;
 
-                if (mode) {
+                if (isMappingMode && segments.length > 0) {
                     let bestPoint = { x: 0, y: 0 }, minDSq = Infinity;
                     for (const seg of segments) {
                         const cp = getClosestPoint(this.x, this.y, seg.a, seg.b);
@@ -166,6 +182,7 @@ export default function Background() {
             draw() {
                 if (!ctx) return;
                 ctx.globalAlpha = Math.max(0, Math.min(this.opacity, 0.4));
+                // FIX: Added backticks for template literal
                 ctx.fillStyle = `hsl(${this.hue}, 5%, 50%)`;
                 ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.size, this.size);
             }
@@ -212,11 +229,7 @@ export default function Background() {
 
         const handleResize = () => {
             const newWidth = window.innerWidth;
-            
-            // KEY FIX: Only reset animation if WIDTH changes.
-            // This ignores the URL bar collapse/expand on mobile scroll.
             if (newWidth === prevWidth) return;
-
             prevWidth = newWidth;
             width = canvas.width = window.innerWidth;
             height = canvas.height = window.innerHeight;

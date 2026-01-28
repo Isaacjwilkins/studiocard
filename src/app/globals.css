@@ -70,3 +70,14 @@ body {
     background-position: 100% 50%;
   }
 }
+
+
+@keyframes shimmer {
+  0% { transform: translateX(-150%) skewX(-12deg); }
+  20% { transform: translateX(150%) skewX(-12deg); } /* Fast pass */
+  100% { transform: translateX(150%) skewX(-12deg); } /* Long pause */
+}
+
+.animate-shimmer {
+  animation: shimmer 5s infinite;
+}

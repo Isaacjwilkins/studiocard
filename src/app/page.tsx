@@ -159,9 +159,9 @@ export default function Home() {
             <div className="inline-flex items-center gap-2 mb-3 text-zinc-400 font-mono text-xs uppercase tracking-widest">
               <span className="md:hidden">01.</span> Step 01
             </div>
-            <h3 className="text-3xl font-bold text-foreground mb-4">Practice makes Perfect.</h3>
+            <h3 className="text-3xl font-bold text-foreground mb-4">You Practice It.</h3>
             <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed mb-6">
-              This part happens at home. Master your scales, polish that sonata, and get ready to show what you can do, all guided by
+              You know what to do. Master your scales, polish that sonata, and get ready to show what you can do, all guided by
               your teacher: both at your lesson, and at home through studio.card.
             </p>
             <div className="flex md:justify-end gap-4">
@@ -205,8 +205,8 @@ export default function Home() {
                 artist={{
                   name: "Alex Rivers",
                   handle: "arivers",
-                  color: "#6366f1", // Indigo
-                  imageColor: "bg-indigo-500",
+                  color: "#f59e0b", // Indigo
+                  imageColor: "bg-orange-500",
                   avatar: "🎙️"
                 }}
               />
@@ -323,14 +323,14 @@ export default function Home() {
             <div className="relative w-full h-full bg-zinc-100 dark:bg-zinc-800">
               {/* LIGHT MODE IMAGE */}
               <Image
-                src="/webcard1.png"
+                src="/webcard1d.png"
                 alt="Website Preview Back"
                 fill
                 className="object-cover object-top opacity-80 dark:hidden"
               />
               {/* DARK MODE IMAGE - Update filename if needed */}
               <Image
-                src="/webcard1d.png"
+                src="/webcard1.png"
                 alt="Website Preview Back Dark"
                 fill
                 className="object-cover object-top opacity-80 hidden dark:block"
@@ -351,18 +351,25 @@ export default function Home() {
             <div className="relative w-full h-full bg-white dark:bg-black">
               {/* LIGHT MODE IMAGE */}
               <Image
-                src="/webcard.png"
+                src="/webcard1.png"
                 alt="Website Preview Front"
                 fill
                 className="object-cover object-top dark:hidden"
               />
               {/* DARK MODE IMAGE - Update filename if needed */}
               <Image
-                src="/webcardd.png"
+                src="/webcard1d.png"
                 alt="Website Preview Front Dark"
                 fill
                 className="object-cover object-top hidden dark:block"
               />
+            {/* ✨✨ NEW: PREMIUM SHIMMER OVERLAY ✨✨ */}
+            <div className="absolute inset-0 z-20 pointer-events-none">
+                <div className="absolute inset-0 w-full h-full bg-gradient-to-tr from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer" />
+              </div>
+              
+              {/* Optional: Subtle static gloss reflection for extra glass feel */}
+              <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-b from-white/5 to-transparent opacity-50" />
             </div>
           </div>
 
@@ -609,69 +616,45 @@ function RecordingCardComponent({ artist }: { artist: any }) {
 
 
 function PracticeCardComponent({ artist }: { artist: any }) {
+  // You can pass these in via the 'artist' prop, or hardcode them here
+  const lightImage = artist.lightImage || "/path/to/your-light-image.png";
+  const darkImage = artist.darkImage || "/path/to/your-dark-image.png";
+
   return (
     <div className="relative w-full h-full rounded-2xl border border-zinc-200 dark:border-white/10 shadow-2xl overflow-hidden bg-white dark:bg-black flex flex-col text-left">
       {/* Dynamic Color Tint */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.05] dark:opacity-[0.15]" style={{ backgroundColor: artist.color }} />
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-[0.05] dark:opacity-[0.15]" 
+        style={{ backgroundColor: artist.color }} 
+      />
 
-      {/* Browser Header */}
-      <div className="h-8 border-b border-zinc-100/50 dark:border-white/5 flex items-center px-4 relative z-20 shrink-0">
+      {/* Browser Header (Traffic Lights) */}
+      <div className="h-8 border-b border-zinc-100/50 dark:border-white/5 flex items-center px-4 relative z-20 shrink-0 bg-white/50 dark:bg-white/5 backdrop-blur-sm">
         <div className="flex gap-1.5">
           <div className="w-2 h-2 rounded-full bg-red-400" />
           <div className="w-2 h-2 rounded-full bg-yellow-400" />
           <div className="w-2 h-2 rounded-full bg-green-400" />
         </div>
-        <div className="ml-3 text-[8px] text-zinc-400 font-mono italic">studio.card/alexrivers</div>
+        <div className="ml-3 text-[8px] text-zinc-400 font-mono italic">
+          studio.card/{artist.id || "alexrivers"}
+        </div>
       </div>
 
-      {/* Body */}
-      <div className="relative w-full flex-1 p-3 flex flex-col">
-        {/* Inner Card Wrapper */}
-        <div className="relative z-10 w-full h-full backdrop-blur-md rounded-[1.2rem] p-4 shadow-xl border overflow-hidden flex flex-col gap-3"
-          style={{ backgroundColor: hexToRgba(artist.color, 0.2), borderColor: hexToRgba(artist.color, 0.1) }}>
-
-          {/* Header Info */}
-          <div className="flex items-center gap-3 mb-1">
-            <div className={`w-10 h-10 rounded-full ${artist.imageColor} shadow-lg border-2 border-white/20 flex items-center justify-center shrink-0`}>
-              <span className="text-xl">{artist.avatar || "🎹"}</span>
-            </div>
-            <div>
-              <div className="font-black text-xs text-foreground leading-none">{artist.name}</div>
-              <div className="text-[8px] text-foreground/50 font-bold uppercase tracking-wider">Active Lesson Plan</div>
-            </div>
-          </div>
-
-          {/* Teacher's Note (Inspired by your code) */}
-          <div className="p-3 rounded-lg bg-white/40 dark:bg-black/20 border-l-[3px] shadow-sm" style={{ borderLeftColor: artist.color }}>
-            <h4 className="text-[7px] font-black uppercase tracking-widest mb-1.5 flex items-center gap-1.5 text-foreground/70">
-              <Music size={8} style={{ color: artist.color }} /> Teacher's Note
-            </h4>
-            <p className="text-[9px] font-medium leading-relaxed italic text-foreground/80">
-              "Focus on the transition in measure 14. Keep your wrist loose!"
-            </p>
-          </div>
-
-          {/* Current Assignments (Inspired by your code) */}
-          <div className="p-3 rounded-lg bg-white/60 dark:bg-black/40 border-l-[3px] shadow-sm flex-1" style={{ borderLeftColor: artist.color }}>
-            <h4 className="text-[7px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5 text-foreground/70">
-              <CloudLightning size={8} style={{ color: artist.color }} /> Current Assignments
-            </h4>
-            <div className="space-y-2">
-              <div className="flex items-start gap-2">
-                <div className="w-3 h-3 rounded-sm border border-foreground/20 mt-0.5" />
-                <p className="text-[9px] font-bold text-foreground">G Major Arpeggios (2 Octaves)</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="w-3 h-3 rounded-sm border border-foreground/20 mt-0.5" />
-                <p className="text-[9px] font-bold text-foreground">Clair de Lune (First 2 Pages)</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="w-full py-2 mt-auto rounded-lg bg-foreground text-background text-[8px] font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-md">
-            Mark Session Complete
-          </div>
-        </div>
+      {/* Body - Image Container */}
+      <div className="relative w-full flex-1 bg-zinc-50 dark:bg-zinc-900 overflow-hidden group">
+        {/* Light Mode Image */}
+        <img 
+          src="IMG_1996 3.jpg"
+          alt="Practice Session Light" 
+          className="w-full h-full object-cover block dark:hidden"
+        />
+        
+        {/* Dark Mode Image */}
+        <img 
+          src={"IMG_1997 3.jpg"} 
+          alt="Practice Session Dark" 
+          className="w-full h-full object-cover hidden dark:block"
+        />
       </div>
     </div>
   );
