@@ -21,7 +21,7 @@ export default function ProfilePage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  
+
   // Photo & Cropping State
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
@@ -75,6 +75,26 @@ export default function ProfilePage() {
     e.preventDefault();
     setLoading(true);
 
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error("Not authenticated");
+    }
+
+    const { error: profileError } = await supabase
+      .from("artists") // change if your table is named differently
+      .update({
+        is_private: formData.isPrivate,
+      })
+      .eq("id", user.id);
+
+    if (profileError) {
+      console.error("Failed to update privacy:", profileError);
+    }
+
+
     const payload = {
       request_type: isSignUp ? 'NEW_USER' : 'UPDATE_PROFILE',
       user_name: formData.fullName,
@@ -84,7 +104,7 @@ export default function ProfilePage() {
     };
 
     const { error } = await supabase.from('profile_requests').insert([payload]);
-    
+
     if (error) {
       await supabase.from('contact_inquiries').insert([{
         full_name: formData.fullName,
@@ -116,7 +136,7 @@ export default function ProfilePage() {
 
   return (
     <main className="min-h-screen pt-32 pb-20 px-6 max-w-3xl mx-auto">
-      
+
       {/* CROP MODAL */}
       <AnimatePresence>
         {imageToCrop && (
@@ -159,21 +179,21 @@ export default function ProfilePage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-xl border border-zinc-200 dark:border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl">
-        
+
         {/* IDENTITY */}
         <div className="grid md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Your Name</label>
             <div className="relative">
               <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-              <input required value={formData.fullName} onChange={(e) => setFormData({...formData, fullName: e.target.value})} placeholder="Leo Piano" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+              <input required value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} placeholder="Leo Piano" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
             </div>
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Passcode</label>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-              <input required value={formData.passcode} onChange={(e) => setFormData({...formData, passcode: e.target.value})} placeholder="1234" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+              <input required value={formData.passcode} onChange={(e) => setFormData({ ...formData, passcode: e.target.value })} placeholder="1234" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
             </div>
           </div>
         </div>
@@ -186,7 +206,7 @@ export default function ProfilePage() {
             <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4 flex items-center gap-2"><Palette size={12} /> Theme Color</label>
             <div className="flex flex-wrap gap-3">
               {COLORS.map((c) => (
-                <button key={c.hex} type="button" onClick={() => setFormData({...formData, color: c.hex})} className={`w-10 h-10 rounded-full transition-transform hover:scale-110 border-2 ${c.class} ${formData.color === c.hex ? 'border-foreground scale-110 ring-2 ring-offset-2 ring-foreground/20' : 'border-transparent'}`} />
+                <button key={c.hex} type="button" onClick={() => setFormData({ ...formData, color: c.hex })} className={`w-10 h-10 rounded-full transition-transform hover:scale-110 border-2 ${c.class} ${formData.color === c.hex ? 'border-foreground scale-110 ring-2 ring-offset-2 ring-foreground/20' : 'border-transparent'}`} />
               ))}
             </div>
           </div>
@@ -195,7 +215,7 @@ export default function ProfilePage() {
             <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4 flex items-center gap-2"><Smile size={12} /> Avatar or Photo</label>
             <div className="grid grid-cols-6 md:grid-cols-12 gap-2">
               {ICONS.map((icon) => (
-                <button key={icon} type="button" onClick={() => setFormData({...formData, icon})} className={`aspect-square rounded-xl flex items-center justify-center text-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors ${formData.icon === icon ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}>{icon}</button>
+                <button key={icon} type="button" onClick={() => setFormData({ ...formData, icon })} className={`aspect-square rounded-xl flex items-center justify-center text-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors ${formData.icon === icon ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}>{icon}</button>
               ))}
               <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
               <button
@@ -214,21 +234,21 @@ export default function ProfilePage() {
         {/* BIO & SOCIALS */}
         <div className="space-y-4">
           <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Mini Bio and Socials (optional)</label>
-          <textarea value={formData.bio} onChange={(e) => setFormData({...formData, bio: e.target.value})} placeholder="I've been playing piano for 3 years. I love Jazz and Minecraft music." rows={3} className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none" />
-          
+          <textarea value={formData.bio} onChange={(e) => setFormData({ ...formData, bio: e.target.value })} placeholder="I've been playing piano for 3 years. I love Jazz and Minecraft music." rows={3} className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none" />
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-             <div className="relative">
-                <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
-                <input value={formData.socials.instagram} onChange={(e) => setFormData({...formData, socials: {...formData.socials, instagram: e.target.value}})} placeholder="Instagram" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-xl py-3 pl-10 pr-3 text-sm font-medium focus:ring-2 focus:ring-pink-500 outline-none" />
-             </div>
-             <div className="relative">
-                <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
-                <input value={formData.socials.youtube} onChange={(e) => setFormData({...formData, socials: {...formData.socials, youtube: e.target.value}})} placeholder="YouTube" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-xl py-3 pl-10 pr-3 text-sm font-medium focus:ring-2 focus:ring-red-500 outline-none" />
-             </div>
-             <div className="relative">
-                <Music className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
-                <input value={formData.socials.tiktok} onChange={(e) => setFormData({...formData, socials: {...formData.socials, tiktok: e.target.value}})} placeholder="TikTok" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-xl py-3 pl-10 pr-3 text-sm font-medium focus:ring-2 focus:ring-white outline-none" />
-             </div>
+            <div className="relative">
+              <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+              <input value={formData.socials.instagram} onChange={(e) => setFormData({ ...formData, socials: { ...formData.socials, instagram: e.target.value } })} placeholder="Instagram" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-xl py-3 pl-10 pr-3 text-sm font-medium focus:ring-2 focus:ring-pink-500 outline-none" />
+            </div>
+            <div className="relative">
+              <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+              <input value={formData.socials.youtube} onChange={(e) => setFormData({ ...formData, socials: { ...formData.socials, youtube: e.target.value } })} placeholder="YouTube" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-xl py-3 pl-10 pr-3 text-sm font-medium focus:ring-2 focus:ring-red-500 outline-none" />
+            </div>
+            <div className="relative">
+              <Music className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+              <input value={formData.socials.tiktok} onChange={(e) => setFormData({ ...formData, socials: { ...formData.socials, tiktok: e.target.value } })} placeholder="TikTok" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-xl py-3 pl-10 pr-3 text-sm font-medium focus:ring-2 focus:ring-white outline-none" />
+            </div>
           </div>
         </div>
 
@@ -243,7 +263,7 @@ export default function ProfilePage() {
               <p className="text-[10px] text-zinc-500 uppercase tracking-wider">{formData.isPrivate ? 'Only people with passcode can view' : 'Anyone can view your card'}</p>
             </div>
           </div>
-          <button type="button" onClick={() => setFormData({...formData, isPrivate: !formData.isPrivate})} className={`relative w-14 h-8 rounded-full transition-colors duration-300 ${formData.isPrivate ? 'bg-red-500' : 'bg-green-500'}`}>
+          <button type="button" onClick={() => setFormData({ ...formData, isPrivate: !formData.isPrivate })} className={`relative w-14 h-8 rounded-full transition-colors duration-300 ${formData.isPrivate ? 'bg-red-500' : 'bg-green-500'}`}>
             <div className={`absolute top-1 left-1 bg-white w-6 h-6 rounded-full shadow-md transition-transform duration-300 ${formData.isPrivate ? 'translate-x-6' : 'translate-x-0'}`} />
           </button>
         </div>

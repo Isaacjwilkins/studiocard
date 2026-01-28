@@ -7,9 +7,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Download, Share2, Play, Pause, Globe, Instagram, Youtube, Check,
   Twitter, Linkedin, Facebook, Ghost, Music, CloudLightning, BadgeCheck, Star,
-  Lock, Unlock, Mic, UploadCloud, Loader2, Trash2, StopCircle, X
+  Lock, Unlock, Mic, UploadCloud, Loader2, Trash2, StopCircle, X, 
+  Eye, EyeOff // <--- Add these two
 } from 'lucide-react';
-
 // --- Types ---
 interface Track {
   id: string;
@@ -18,6 +18,8 @@ interface Track {
   audio_url: string;
   description: string | null;
   artist_id: string;
+  created_at?: string;
+  is_public: boolean; // <--- This was missing
 }
 
 interface Artist {
@@ -27,7 +29,10 @@ interface Artist {
   profile_image_url: string | null;
   card_color: string | null;
   caption: string | null;
+  current_note: string | null;
+  current_assignments: string | null;
   passcode?: string;
+  is_private: boolean;
   // Socials
   website: string | null;
   instagram: string | null;
@@ -56,13 +61,18 @@ const hexToRgba = (hex: string | null, alpha: number) => {
 
 export default function ArtistProfile({ artist: initialArtist, tracks: initialTracks }: { artist: Artist; tracks: Track[] }) {
   // Data State
-  const [artist] = useState<Artist>(initialArtist);
+  const [artist, setArtist] = useState<Artist>(initialArtist);
   const [tracks, setTracks] = useState<Track[]>(initialTracks);
 
   // UI State
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({});
+
+  // Security State
+  const [isPageLocked, setIsPageLocked] = useState(initialArtist.is_private);
+  const [pageUnlockInput, setPageUnlockInput] = useState("");
+  const [unlockError, setUnlockError] = useState(false);
 
   // Manager State
   const [showLogin, setShowLogin] = useState(false);
@@ -78,7 +88,8 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // --- 1. REFRESH DATA ---
+  // --- ACTIONS ---
+
   const refreshTracks = async () => {
     const { data } = await supabase
       .from("tracks")
@@ -88,55 +99,90 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
     if (data) setTracks(data);
   };
 
-  // --- 2. MANAGER ACTIONS ---
-  const handleLogin = async () => {
-    // Verify passcode against DB
-    const { data } = await supabase
-      .from('artists')
-      .select('passcode')
-      .eq('id', artist.id)
-      .single();
+  const handlePageUnlock = async () => {
+    const { data } = await supabase.from('artists').select('passcode').eq('id', artist.id).single();
+    if (data && data.passcode === pageUnlockInput) {
+      setIsPageLocked(false);
+      setUnlockError(false);
+    } else {
+      setUnlockError(true);
+    }
+  };
 
+  const handleManagerLogin = async () => {
+    const { data } = await supabase.from('artists').select('passcode').eq('id', artist.id).single();
     if (data && data.passcode === passcodeInput) {
       setIsManager(true);
       setShowLogin(false);
+      setIsPageLocked(false);
     } else {
       alert("Incorrect passcode");
     }
   };
 
-  const deleteTrack = async (track: Track) => {
-    if (!confirm("Are you sure you want to delete this track? This cannot be undone.")) return;
+  // --- UPDATED ACTIONS ---
 
-    // 1. Delete from DB
-    const { error } = await supabase.from('tracks').delete().eq('id', track.id);
-    if (error) {
-      alert("Error deleting track: " + error.message);
-      return;
+  // 1. FIXED PRIVACY TOGGLE: Now selects the data back to ensure DB updated successfully
+  const togglePrivacy = async () => {
+    try {
+      const newValue = !artist.is_private;
+      const { data, error } = await supabase
+        .from('artists')
+        .update({ is_private: newValue })
+        .eq('id', artist.id)
+        .select() // Important: asks Supabase to return the updated row
+        .single();
+
+      if (error) throw error;
+      if (data) setArtist(data); // Update state with real DB result
+    } catch (err: any) {
+      alert("Error updating privacy settings: " + err.message);
     }
-
-    // 2. (Optional) Delete from Storage - tricky to get path from URL, 
-    // so we'll just remove the DB link for now to be safe and fast.
-
-    // 3. Refresh
-    await refreshTracks();
   };
 
-  // --- 3. RECORDER LOGIC (Music Optimized) ---
+  // 2. NEW: TRACK VISIBILITY TOGGLE
+  const toggleTrackVisibility = async (track: Track) => {
+    try {
+      const newValue = !track.is_private;
+      // Optimistic UI update (makes it feel instant)
+      setTracks(tracks.map(t => t.id === track.id ? { ...t, is_private: newValue } : t));
+
+      const { error } = await supabase
+        .from('tracks')
+        .update({ is_private: newValue })
+        .eq('id', track.id);
+
+      if (error) {
+        // Revert on error
+        setTracks(tracks.map(t => t.id === track.id ? { ...t, is_private: !newValue } : t));
+        alert("Error updating visibility");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // 3. FILTERING: Only show public tracks if not a manager
+  const displayedTracks = isManager 
+    ? tracks 
+    : tracks.filter(t => t.is_public !== false); // Default to visible if null
+
+  const deleteTrack = async (track: Track) => {
+    if (!confirm("Delete this track?")) return;
+    const { error } = await supabase.from('tracks').delete().eq('id', track.id);
+    if (error) alert("Error: " + error.message);
+    else await refreshTracks();
+  };
+
+  // --- RECORDER ---
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,
-          autoGainControl: false,
-          noiseSuppression: false
-        }
+        audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false }
       });
-
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       const chunks: BlobPart[] = [];
-
       mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: "audio/webm" });
@@ -145,7 +191,6 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
         setUploadMode("select");
         stream.getTracks().forEach(t => t.stop());
       };
-
       mediaRecorder.start();
       setUploadMode("record");
       setRecordingDuration(0);
@@ -163,35 +208,21 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
   const publishTrack = async () => {
     if (!audioBlob || !trackTitle) return;
     setUploadMode("uploading");
-
     try {
       const fileName = `${artist.id}/${Date.now()}.webm`;
       const { error: uploadError } = await supabase.storage.from("audio-tracks").upload(fileName, audioBlob);
       if (uploadError) throw uploadError;
-
       const { data: urlData } = supabase.storage.from("audio-tracks").getPublicUrl(fileName);
-
       const { error: dbError } = await supabase.from("tracks").insert([{
-        artist_id: artist.id,
-        title: trackTitle,
-        audio_url: urlData.publicUrl,
-        release_date: new Date().toISOString()
+        artist_id: artist.id, title: trackTitle, audio_url: urlData.publicUrl, release_date: new Date().toISOString()
       }]);
-
       if (dbError) throw dbError;
-
       await refreshTracks();
-      setAudioBlob(null);
-      setPreviewUrl(null);
-      setTrackTitle("");
-      setUploadMode("hidden");
-    } catch (err: any) {
-      alert("Upload failed: " + err.message);
-      setUploadMode("select");
-    }
+      setAudioBlob(null); setPreviewUrl(null); setTrackTitle(""); setUploadMode("hidden");
+    } catch (err: any) { alert("Upload failed: " + err.message); setUploadMode("select"); }
   };
 
-  // --- RENDER HELPERS ---
+  // --- HELPERS ---
   const glassStyle = {
     backgroundColor: hexToRgba(artist.card_color, 0.5),
     borderColor: hexToRgba(artist.card_color, 0.2),
@@ -210,6 +241,13 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
     }
   };
 
+  const handleShare = async () => {
+    const url = window.location.href;
+    const shareData = { title: `${artist.full_name} on WilkinStudio`, text: `Listen to ${artist.full_name}.`, url: url };
+    if (navigator.share && navigator.canShare(shareData)) { try { await navigator.share(shareData); } catch (err) { console.error(err); } }
+    else { try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch (err) { console.error(err); } }
+  };
+
   const SocialLink = ({ href, icon: Icon, colorClass }: { href: string | null, icon: any, colorClass: string }) => {
     if (!href) return null;
     return (
@@ -219,30 +257,30 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
     );
   };
 
-  // --- SHARE FUNCTION ---
-  const handleShare = async () => {
-    const url = window.location.href;
-    const shareData = {
-      title: `${artist.full_name} on WilkinStudio`,
-      text: `Listen to ${artist.full_name}'s latest recordings.`,
-      url: url,
-    };
-
-    if (navigator.share && navigator.canShare(shareData)) {
-      try { await navigator.share(shareData); } catch (err) { console.error(err); }
-    } else {
-      try {
-        await navigator.clipboard.writeText(url);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) { console.error(err); }
-    }
-  };
-
+  // --- RENDER ---
   return (
-    <div style={glassStyle} className="w-full max-w-4xl backdrop-blur-xl rounded-[2.5rem] p-8 md:p-12 shadow-2xl overflow-hidden border transition-colors duration-500">
+    <div style={glassStyle} className="relative w-full max-w-4xl backdrop-blur-xl rounded-[2.5rem] p-8 md:p-12 shadow-2xl overflow-hidden border transition-colors duration-500 min-h-[600px]">
 
-      {/* MANAGER LOGIN OVERLAY */}
+      {/* 1. LOCK SCREEN */}
+      {isPageLocked && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white dark:bg-black p-6 text-center animate-in fade-in duration-700">
+          <div className="bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-white/20">
+            <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Lock size={32} className="text-zinc-400" />
+            </div>
+            <h2 className="text-2xl font-black tracking-tight mb-2">Private Studio</h2>
+            <p className="text-zinc-500 mb-6 font-medium">This profile is currently locked.</p>
+            <div className="space-y-3">
+              <input type="password" placeholder="Enter Passcode" value={pageUnlockInput} onChange={(e) => setPageUnlockInput(e.target.value)}
+                className="w-full p-4 bg-zinc-100 dark:bg-zinc-800 rounded-xl font-bold text-center tracking-[0.3em] outline-none focus:ring-2 focus:ring-blue-500" />
+              <button onClick={handlePageUnlock} className="w-full py-4 bg-foreground text-background font-black uppercase tracking-widest rounded-xl hover:opacity-90">Unlock</button>
+              {unlockError && <p className="text-red-500 text-xs font-bold animate-pulse">Incorrect Passcode</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. LOGIN MODAL */}
       {showLogin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl w-full max-w-sm shadow-2xl">
@@ -250,111 +288,112 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
               <h3 className="font-bold text-sm uppercase tracking-widest">Artist Access</h3>
               <button onClick={() => setShowLogin(false)}><X size={20} /></button>
             </div>
-            <input
-              type="password"
-              placeholder="Enter Passcode"
+            <input type="password" placeholder="Enter Passcode"
               className="w-full bg-zinc-100 dark:bg-zinc-800 p-4 rounded-xl mb-3 font-bold text-center tracking-[0.5em] outline-none focus:ring-2 focus:ring-blue-500"
-              value={passcodeInput}
-              onChange={(e) => setPasscodeInput(e.target.value)}
-            />
-            <button onClick={handleLogin} className="w-full py-3 bg-black dark:bg-white text-white dark:text-black font-bold rounded-xl">Unlock Studio</button>
+              value={passcodeInput} onChange={(e) => setPasscodeInput(e.target.value)} />
+            <button onClick={handleManagerLogin} className="w-full py-3 bg-black dark:bg-white text-white dark:text-black font-bold rounded-xl">Unlock Studio</button>
           </div>
         </div>
       )}
 
+      
+
+      {/* 4. MAIN LAYOUT GRID */}
       <div className="grid md:grid-cols-[280px_1fr] gap-12 items-start">
 
-        {/* LEFT COLUMN: Artist Info */}
-        <div className="flex flex-col items-center space-y-4">
-          <div className="relative aspect-square w-full max-w-[240px] rounded-full overflow-hidden border-4 border-white/10 shadow-2xl bg-black/5">
+        {/* --- LEFT COLUMN --- */}
+        <div className="flex flex-col items-center space-y-4 w-full">
+
+          {/* Profile Pic - Hidden on Mobile Manager */}
+          <div className={`relative aspect-square w-full max-w-[240px] rounded-full overflow-hidden border-4 border-white/10 shadow-2xl bg-black/5 ${isManager ? 'hidden md:block' : 'block'}`}>
             {artist.profile_image_url ? <Image src={artist.profile_image_url} alt={artist.full_name} fill className="object-cover" /> : <div className="w-full h-full flex items-center justify-center">No Image</div>}
           </div>
 
-          {/* Badges */}
+          {/* Badges - Hidden on Mobile Manager */}
           {(artist.is_verified || artist.is_premium) && (
-            <div className="flex flex-wrap justify-center gap-2 my-1">
-              {artist.is_verified && (
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5">
-                  <BadgeCheck className="text-blue-500" size={14} strokeWidth={2.5} />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-foreground/70">Verified</span>
+            <div className={`flex flex-wrap justify-center gap-2 my-1 ${isManager ? 'hidden md:flex' : 'flex'}`}>
+              {artist.is_verified && <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 border border-white/10"><BadgeCheck className="text-blue-500" size={14} /><span className="text-[10px] font-bold uppercase text-foreground/80">Verified</span></div>}
+              {artist.is_premium && <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 border border-white/10"><Star className="text-amber-500 fill-amber-500" size={12} /><span className="text-[10px] font-bold uppercase text-foreground/80">Premium</span></div>}
+            </div>
+          )}
+
+          {/* Practice Mode Button - Always visible, mobile & desktop */}
+          <button
+            onClick={() => isManager ? setIsManager(false) : setShowLogin(true)}
+            className={`flex items-center justify-center gap-2 mt-3 px-6 py-3 rounded-full
+    bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500
+    hover:from-indigo-400 hover:via-violet-400 hover:to-fuchsia-400
+    text-white shadow-xl shadow-indigo-500/40
+    text-xs font-black uppercase tracking-widest
+    transition-all hover:scale-[1.02]
+    flex`}
+          >
+            {isManager ? <Unlock size={16} /> : <Lock size={16} />}
+            {isManager ? "Exit Practice Mode" : "Practice Mode"}
+          </button>
+
+
+
+
+          {/* Socials - Hidden on Mobile Manager */}
+          <div className={`flex flex-wrap justify-center gap-2 w-full px-2 ${isManager ? 'hidden md:flex' : 'flex'}`}>
+            <SocialLink href={artist.instagram} icon={Instagram} colorClass="hover:text-pink-600" />
+            <SocialLink href={artist.website} icon={Globe} colorClass="hover:text-indigo-500" />
+            {/* Add other socials */}
+          </div>
+
+          {/* STUDENT DASHBOARD - Always visible if Manager. Mobile: Appears here (top of flow). Desktop: Appears in Sidebar. */}
+          {isManager && (artist.current_assignments || artist.current_note) && (
+            <div className="w-full mt-2 space-y-4 animate-in slide-in-from-bottom-2">
+              {artist.current_assignments && (
+                <div
+                  className="p-5 rounded-r-xl rounded-l-md shadow-sm border-y border-r border-l-[6px] bg-white dark:bg-zinc-900 transition-colors"
+                  style={{ borderLeftColor: artist.card_color || '#000', borderColor: hexToRgba(artist.card_color, 0.2) }}
+                >
+                  <h4 className="text-[10px] font-black uppercase tracking-widest mb-3 flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
+                    <CloudLightning size={12} style={{ color: artist.card_color || 'currentColor' }} /> Current Assignments
+                  </h4>
+                  <p className="text-sm font-bold leading-relaxed whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">{artist.current_assignments}</p>
                 </div>
               )}
-              {artist.is_premium && (
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5">
-                  <Star className="text-amber-500 fill-amber-500" size={12} />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-foreground/70">Premium</span>
+              {artist.current_note && (
+                <div
+                  className="p-5 rounded-r-xl rounded-l-md shadow-sm border-y border-r border-l-[6px] bg-white dark:bg-zinc-900 transition-colors"
+                  style={{ borderLeftColor: artist.card_color || '#000', borderColor: hexToRgba(artist.card_color, 0.1) }}
+                >
+                  <h4 className="text-[10px] font-black uppercase tracking-widest mb-2 opacity-80 flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
+                    <Music size={12} style={{ color: artist.card_color || 'currentColor' }} /> Teacher's Note
+                  </h4>
+                  <p className="text-xs font-medium leading-relaxed whitespace-pre-wrap text-zinc-600 dark:text-zinc-400">"{artist.current_note}"</p>
                 </div>
               )}
             </div>
           )}
-
-          <button
-            onClick={() => isManager ? setIsManager(false) : setShowLogin(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-xs font-bold uppercase tracking-widest transition-all"
-          >
-            {isManager ? <><Unlock size={14} /> Student Active</> : <><Lock size={14} /> Artist Login</>}
-          </button>
-
-{/* Share Button */}
-<motion.button 
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleShare}
-            className="w-full py-3 rounded-xl bg-foreground text-background text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 shadow-md"
-          >
-            <AnimatePresence mode="wait">
-              {copied ? (
-                <motion.span 
-                  key="copied"
-                  initial={{ opacity: 0, y: 10 }} 
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="flex items-center gap-2 text-green-400"
-                >
-                  <Check size={14} /> Copied!
-                </motion.span>
-              ) : (
-                <motion.span 
-                  key="share"
-                  initial={{ opacity: 0, y: 10 }} 
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="flex items-center gap-2"
-                >
-                  <Share2 size={14} /> Share Profile
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </motion.button>
-
-          {/* Socials Block */}
-          <div className="flex flex-wrap justify-center gap-2 w-full px-2">
-            <SocialLink href={artist.instagram} icon={Instagram} colorClass="hover:text-pink-600" />
-            <SocialLink href={artist.website} icon={Globe} colorClass="hover:text-indigo-500" />
-            {/* Add other socials here as needed */}
-          </div>
         </div>
 
-        {/* RIGHT COLUMN: Content */}
-        <div className="space-y-8 mt-4 md:mt-0">
-          <div>
-            <h1 className="text-4xl md:text-6xl font-black tracking-tighter mb-4 text-center md:text-left">{artist.full_name}</h1>
-            <div className="h-1 w-20 bg-foreground rounded-full mx-auto md:mx-0" />
+        {/* --- RIGHT COLUMN --- */}
+        <div className="space-y-8 mt-4 md:mt-0 w-full min-w-0">
+
+          {/* Name & Bio - Hidden on Mobile Manager (Name is in header) */}
+          <div className={isManager ? 'hidden md:block' : 'block'}>
+            <div className="mb-4 text-center md:text-left">
+              <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-foreground break-words leading-tight">{artist.full_name}</h1>
+              <div className="h-1 w-20 bg-foreground rounded-full mx-auto md:mx-0 mt-4" />
+            </div>
+            <div className="prose dark:prose-invert text-foreground/80 font-medium text-center md:text-left">
+              {artist.bio || "No biography available."}
+            </div>
           </div>
 
-          <div className="prose dark:prose-invert text-foreground/80 font-medium text-center md:text-left">
-            {artist.bio || "No biography available."}
-          </div>
-
-          {/* STUDIO MANAGER PANEL */}
+          {/* MANAGER STUDIO PANEL - Always visible if Manager */}
           {isManager && (
-            <div className="bg-black/5 dark:bg-white/5 border border-foreground/10 p-6 rounded-3xl animate-in slide-in-from-top-4">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-3xl animate-in slide-in-from-top-4 shadow-sm">
               {uploadMode === "hidden" ? (
                 <div className="grid grid-cols-2 gap-4">
-                  <button onClick={startRecording} className="flex flex-col items-center gap-2 p-6 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-2xl transition-colors">
+                  <button onClick={startRecording} className="flex flex-col items-center gap-2 p-6 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 rounded-2xl transition-colors">
                     <Mic size={24} /> <span className="text-xs font-black uppercase">Record</span>
                   </button>
-                  <label className="flex flex-col items-center gap-2 p-6 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-2xl transition-colors cursor-pointer">
+                  <label className="flex flex-col items-center gap-2 p-6 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-2xl transition-colors cursor-pointer">
                     <UploadCloud size={24} /> <span className="text-xs font-black uppercase">Upload</span>
                     <input type="file" accept="audio/*" className="hidden" onChange={(e) => {
                       const file = e.target.files?.[0];
@@ -376,53 +415,106 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
                     value={trackTitle}
                     onChange={(e) => setTrackTitle(e.target.value)}
                     placeholder="Track Title..."
-                    className="w-full p-3 bg-white/50 dark:bg-black/50 rounded-xl font-bold"
+                    className="w-full p-3 bg-zinc-100 dark:bg-black rounded-xl font-bold text-zinc-900 dark:text-white"
                   />
                   <div className="flex gap-2">
-                    <button onClick={() => setUploadMode("hidden")} className="flex-1 py-3 font-bold opacity-50">Cancel</button>
+                    <button onClick={() => setUploadMode("hidden")} className="flex-1 py-3 font-bold opacity-50 text-zinc-900 dark:text-white">Cancel</button>
                     <button onClick={publishTrack} className="flex-1 py-3 bg-foreground text-background rounded-xl font-bold">Publish</button>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-center py-8 gap-2 font-bold"><Loader2 className="animate-spin" /> Uploading...</div>
+                <div className="flex items-center justify-center py-8 gap-2 font-bold text-zinc-500"><Loader2 className="animate-spin" /> Uploading...</div>
               )}
             </div>
           )}
 
-          {/* TRACK LIST */}
-          <div className="space-y-4 pt-4">
-            <h3 className="text-xs font-bold uppercase tracking-[0.3em] opacity-50 mb-2">Recordings</h3>
+{/* TRACK LIST - Always Visible */}
+<div className="space-y-4 pt-4">
+            <h3 className="text-xs font-bold uppercase tracking-[0.3em] opacity-50 mb-2 text-center md:text-left">Recordings</h3>
+            
+            {!displayedTracks.length ? (
+              <p className="italic opacity-50 text-center md:text-left">
+                {isManager ? "No tracks yet." : "No public tracks available."}
+              </p>
+            ) : (
+              displayedTracks.map((track) => {
+                const isPlaying = playingTrackId === track.id;
+                return (
+                  <div key={track.id} className={`relative p-4 rounded-2xl border transition-all ${isPlaying ? 'bg-white/20 border-foreground/20' : 'bg-black/5 dark:bg-white/5 border-transparent'}`}>
+                    <div className="flex items-center justify-between mb-3">
+                      
+                      {/* Play Button & Title */}
+                      <div className="flex items-center gap-4 overflow-hidden">
+                        <button onClick={() => handlePlayToggle(track.id)} className="w-12 h-12 shrink-0 rounded-full bg-foreground text-background flex items-center justify-center shadow-lg">
+                          {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-1" />}
+                        </button>
+                        <div className="min-w-0">
+                          <h4 className={`font-bold text-lg truncate pr-2 ${!track.is_public && isManager ? 'opacity-50' : ''}`}>
+                            {track.title}
+                          </h4>
+                          <p className="text-xs opacity-60 uppercase tracking-wider">{new Date(track.created_at || Date.now()).toLocaleDateString()}</p>
+                        </div>
+                      </div>
 
-            {!tracks.length ? <p className="italic opacity-50">No tracks yet.</p> : tracks.map((track) => {
-              const isPlaying = playingTrackId === track.id;
-              return (
-                <div key={track.id} className={`relative p-4 rounded-2xl border transition-all ${isPlaying ? 'bg-white/20 border-foreground/20' : 'bg-black/5 dark:bg-white/5 border-transparent'}`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-4">
-                      <button onClick={() => handlePlayToggle(track.id)} className="w-12 h-12 rounded-full bg-foreground text-background flex items-center justify-center shadow-lg">
-                        {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-1" />}
-                      </button>
-                      <div>
-                        <h4 className="font-bold text-lg">{track.title}</h4>
-                        <p className="text-xs opacity-60 uppercase tracking-wider">{new Date(track.created_at || Date.now()).toLocaleDateString()}</p>
+                      {/* Actions */}
+                      <div className="flex gap-2 shrink-0 items-center">
+                        {/* Download / Open in New Tab */}
+                        <a 
+                          href={track.audio_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="p-2 opacity-40 hover:opacity-100 transition-opacity"
+                        >
+                          <Download size={20} />
+                        </a>
+
+                        {/* Manager Only Actions */}
+                        {isManager && (
+                          <>
+                            {/* Visibility Toggle */}
+                            <button 
+                              onClick={() => toggleTrackVisibility(track)} 
+                              className={`p-2 transition-all hover:bg-black/5 rounded-lg ${track.is_public !== false ? 'opacity-40 hover:opacity-100' : 'opacity-100 text-red-500'}`}
+                              title={track.is_public !== false ? "Public: Click to Hide" : "Hidden: Click to Show"}
+                            >
+                              {track.is_public !== false ? <Eye size={20} /> : <EyeOff size={20} />}
+                            </button>
+
+                            {/* Delete */}
+                            <button onClick={() => deleteTrack(track)} className="p-2 text-red-500 opacity-60 hover:opacity-100 hover:bg-red-500/10 rounded-lg transition-all">
+                              <Trash2 size={20} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
-
-                    <div className="flex gap-2">
-                      <a href={track.audio_url} download className="p-2 opacity-40 hover:opacity-100 transition-opacity"><Download size={20} /></a>
-                      {/* DELETE BUTTON (Only shows if Manager) */}
-                      {isManager && (
-                        <button onClick={() => deleteTrack(track)} className="p-2 text-red-500 opacity-60 hover:opacity-100 hover:bg-red-500/10 rounded-lg transition-all">
-                          <Trash2 size={20} />
-                        </button>
-                      )}
-                    </div>
+                    <audio ref={(el) => { audioRefs.current[track.id] = el }} src={track.audio_url} onEnded={() => setPlayingTrackId(null)} className="hidden" />
                   </div>
-                  <audio ref={(el) => { audioRefs.current[track.id] = el }} src={track.audio_url} onEnded={() => setPlayingTrackId(null)} className="hidden" />
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
+
+          {/* PRIVACY TOGGLE - Visible if Manager. Placed at bottom of Right Col so it renders last on mobile. */}
+          {isManager && (
+            <div className="pt-8 border-t border-foreground/10">
+              <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-foreground/5">
+                <div className="flex items-center gap-3">
+                  {artist.is_private ? <Lock size={20} className="text-red-500" /> : <Globe size={20} className="text-green-500" />}
+                  <div className="flex flex-col">
+                    <span className="font-bold text-sm">Privacy</span>
+                    <span className="text-xs opacity-60">{artist.is_private ? "Locked" : "Public"}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={togglePrivacy}
+                  className={`px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-colors ${artist.is_private ? "bg-red-500/20 text-red-500" : "bg-green-500/20 text-green-500"}`}
+                >
+                  {artist.is_private ? "Unlock" : "Lock"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
