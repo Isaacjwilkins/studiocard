@@ -31,14 +31,17 @@ export default async function ArtistPage({ params }: { params: Promise<{ slug: s
     .order('release_date', { ascending: false });
 
   return (
-    <main className="min-h-screen relative flex flex-col items-center pt-6 pb-4 px-6 overflow-hidden">
+    <main className="min-h-screen relative flex flex-col items-center pt-18 pb-6 px-6 overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-[50vh] bg-gradient-to-b from-zinc-200/50 dark:from-zinc-900/50 to-transparent -z-10 blur-3xl" />
 
-      
+      <div className="w-full max-w-4xl mb-12 flex justify-between items-center">
+        <Link href="/" className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 hover:text-foreground transition-colors">
+          ←
+        </Link>
         <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
           studio.card Artist
         </div>
-    
+      </div>
 
       {/* Render the Client Component */}
       <ArtistProfile artist={artist} tracks={tracks || []} />
