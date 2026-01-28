@@ -34,37 +34,34 @@ export default function Background() {
     // Track previous scroll to avoid unnecessary DOM updates
     const prevScrollProgress = useRef(-1);
 
+    const intervalRef = useRef<number | null>(null);
+    const timeoutRef = useRef<number | null>(null);
+
     useEffect(() => {
         // Start on swirls
         pianoModeRef.current = false;
       
-        // Switch to piano after 2 seconds
-        const initialTimeout = setTimeout(() => {
+        timeoutRef.current = window.setTimeout(() => {
           pianoModeRef.current = true;
       
-          // Then start the 8 second interval
-          const interval = setInterval(() => {
+          intervalRef.current = window.setInterval(() => {
             pianoModeRef.current = !pianoModeRef.current;
           }, 8000);
-      
-          return () => clearInterval(interval);
         }, 2000);
       
-        return () => clearTimeout(initialTimeout);
-      
-      
-        // 2. Optimized Scroll Listener
         const handleScroll = () => {
-            scrollRef.current = window.scrollY;
+          scrollRef.current = window.scrollY;
         };
-
+      
         window.addEventListener("scroll", handleScroll, { passive: true });
-
+      
         return () => {
-            clearInterval(interval);
-            window.removeEventListener("scroll", handleScroll);
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          window.removeEventListener("scroll", handleScroll);
         };
-    }, []);
+      }, []);
+      
 
     useEffect(() => {
         const canvas = canvasRef.current;

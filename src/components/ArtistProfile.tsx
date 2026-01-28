@@ -5,9 +5,10 @@ import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import {
   Download, Play, Pause, Globe, Instagram, CloudLightning, BadgeCheck, Star,
-  Lock, Unlock, Mic, UploadCloud, Loader2, Trash2, StopCircle, X, 
-  Eye, EyeOff, Music, Zap // <--- Added Music back here
+  Lock, Unlock, Mic, UploadCloud, Loader2, Trash2, StopCircle, X,
+  Eye, EyeOff, Music, Zap
 } from 'lucide-react';
+
 // --- Types ---
 interface Track {
   id: string;
@@ -17,7 +18,7 @@ interface Track {
   description: string | null;
   artist_id: string;
   created_at?: string;
-  is_public: boolean; // Maps to your database column
+  is_public: boolean;
 }
 
 interface Artist {
@@ -65,6 +66,11 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
   // UI State
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({});
+
+  // Playback State
+  const [progress, setProgress] = useState(0); // 0 to 100
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   // Security State
   const [isPageLocked, setIsPageLocked] = useState(initialArtist.is_private);
@@ -117,31 +123,101 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
     }
   };
 
-  // 1. TRACK VISIBILITY TOGGLE (Robust with Error Handling)
+  // --- DOWNLOAD HANDLER ---
+  const handleDownload = async (trackToDownload: Track) => {
+    try {
+      const response = await fetch(trackToDownload.audio_url);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${trackToDownload.title}.webm`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download failed:", err);
+      window.open(trackToDownload.audio_url, '_blank');
+    }
+  };
+
+  // --- AUDIO HANDLERS ---
+
+  const handlePlayToggle = (trackId: string) => {
+    const audio = audioRefs.current[trackId];
+    if (!audio) return;
+
+    if (playingTrackId === trackId) {
+      audio.pause();
+      setPlayingTrackId(null);
+    } else {
+      if (playingTrackId && audioRefs.current[playingTrackId]) {
+        audioRefs.current[playingTrackId]?.pause();
+      }
+      audio.play();
+      setPlayingTrackId(trackId);
+      setCurrentTime(audio.currentTime);
+      setProgress(0);
+      if (!isNaN(audio.duration) && isFinite(audio.duration)) {
+        setDuration(audio.duration);
+      } else {
+        setDuration(0);
+      }
+    }
+  };
+
+  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLAudioElement>, trackId: string) => {
+    if (trackId !== playingTrackId) return;
+    const audio = e.currentTarget;
+    if (audio.duration && isFinite(audio.duration)) {
+      setCurrentTime(audio.currentTime);
+      setProgress((audio.currentTime / audio.duration) * 100);
+    }
+  };
+
+  const handleLoadedMetadata = (e: React.SyntheticEvent<HTMLAudioElement>, trackId: string) => {
+    if (trackId !== playingTrackId) return;
+    const audio = e.currentTarget;
+    if (isFinite(audio.duration)) {
+      setDuration(audio.duration);
+    }
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>, trackId: string) => {
+    const newProgress = parseFloat(e.target.value);
+    const audio = audioRefs.current[trackId];
+    if (audio && audio.duration && isFinite(audio.duration)) {
+      const newTime = (newProgress / 100) * audio.duration;
+      audio.currentTime = newTime;
+      setProgress(newProgress);
+      setCurrentTime(newTime);
+    }
+  };
+
+  const formatTime = (time: number) => {
+    if (isNaN(time) || !isFinite(time)) return "0:00";
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  // 1. TRACK VISIBILITY TOGGLE
   const toggleTrackVisibility = async (track: Track) => {
     try {
-      // Logic: If null/undefined, treat as FALSE (hidden), then toggle
-      const currentStatus = track.is_public === true; 
+      const currentStatus = track.is_public === true;
       const newValue = !currentStatus;
-
-      // Optimistic UI Update
-      setTracks(currentTracks => 
+      setTracks(currentTracks =>
         currentTracks.map(t => t.id === track.id ? { ...t, is_public: newValue } : t)
       );
-
-      // Database Update
       const { error } = await supabase
         .from('tracks')
         .update({ is_public: newValue })
         .eq('id', track.id);
-
-      // Error Handling
       if (error) {
         console.error("Supabase Save Error:", error.message);
         alert(`Could not save visibility: ${error.message}`);
-        
-        // Revert UI if save failed
-        setTracks(currentTracks => 
+        setTracks(currentTracks =>
           currentTracks.map(t => t.id === track.id ? { ...t, is_public: currentStatus } : t)
         );
       }
@@ -158,12 +234,9 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
     else await refreshTracks();
   };
 
-  // 2. FILTERING: Logic updated for default=false
-  // If Manager: Show all tracks.
-  // If Public: Show ONLY tracks where is_public === true.
-  const displayedTracks = isManager 
-    ? tracks 
-    : tracks.filter(t => t.is_public === true); 
+  const displayedTracks = isManager
+    ? tracks
+    : tracks.filter(t => t.is_public === true);
 
   // --- RECORDER ---
   const startRecording = async () => {
@@ -204,16 +277,13 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
       const { error: uploadError } = await supabase.storage.from("audio-tracks").upload(fileName, audioBlob);
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from("audio-tracks").getPublicUrl(fileName);
-      
-      // Default new uploads to FALSE (hidden) unless you want them public immediately
       const { error: dbError } = await supabase.from("tracks").insert([{
-        artist_id: artist.id, 
-        title: trackTitle, 
-        audio_url: urlData.publicUrl, 
-        release_date: new Date().toISOString(), 
-        is_public: false // Default to Hidden
+        artist_id: artist.id,
+        title: trackTitle,
+        audio_url: urlData.publicUrl,
+        release_date: new Date().toISOString(),
+        is_public: false
       }]);
-      
       if (dbError) throw dbError;
       await refreshTracks();
       setAudioBlob(null); setPreviewUrl(null); setTrackTitle(""); setUploadMode("hidden");
@@ -224,19 +294,6 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
   const glassStyle = {
     backgroundColor: hexToRgba(artist.card_color, 0.5),
     borderColor: hexToRgba(artist.card_color, 0.2),
-  };
-
-  const handlePlayToggle = (trackId: string) => {
-    const audio = audioRefs.current[trackId];
-    if (!audio) return;
-    if (playingTrackId === trackId) {
-      audio.pause();
-      setPlayingTrackId(null);
-    } else {
-      if (playingTrackId && audioRefs.current[playingTrackId]) audioRefs.current[playingTrackId]?.pause();
-      audio.play();
-      setPlayingTrackId(trackId);
-    }
   };
 
   const SocialLink = ({ href, icon: Icon, colorClass }: { href: string | null, icon: any, colorClass: string }) => {
@@ -301,7 +358,7 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
           {/* Badges - Hidden on Mobile Manager */}
           {(artist.is_verified || artist.is_premium) && (
             <div className={`flex flex-wrap justify-center gap-2 my-1 ${isManager ? 'hidden md:flex' : 'flex'}`}>
-              {artist.is_verified && <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 border border-white/10"><BadgeCheck className="text-blue-500" size={14} /><span className="text-[10px] font-bold uppercase text-foreground/80">5 Day Streak</span></div>}
+              {artist.is_verified && <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 border border-white/10"><BadgeCheck className="text-blue-500" size={14} /><span className="text-[10px] font-bold uppercase text-foreground/80">Verified</span></div>}
               {artist.is_premium && <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 border border-white/10"><Zap className="text-amber-500 fill-amber-500" size={12} /><span className="text-[10px] font-bold uppercase text-foreground/80">Pro</span></div>}
             </div>
           )}
@@ -414,7 +471,7 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
             </div>
           )}
 
-          {/* TRACK LIST - Always Visible */}
+          {/* TRACK LIST - With Progress Bar */}
           <div className="space-y-4 pt-4">
             <h3 className="text-xs font-bold uppercase tracking-[0.3em] opacity-50 mb-2 text-center md:text-left">Recordings</h3>
 
@@ -433,34 +490,49 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
                     <div className="flex items-center justify-between mb-3">
 
                       {/* Play Button & Title */}
-                      <div className="flex items-center gap-4 overflow-hidden">
-                        <button onClick={() => handlePlayToggle(track.id)} className="w-12 h-12 shrink-0 rounded-full bg-foreground text-background flex items-center justify-center shadow-lg">
+                      <div className="flex items-center gap-4 overflow-hidden flex-1">
+                        <button onClick={() => handlePlayToggle(track.id)} className="w-12 h-12 shrink-0 rounded-full bg-foreground text-background flex items-center justify-center shadow-lg transition-transform active:scale-95">
                           {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-1" />}
                         </button>
-                        <div className="min-w-0">
+
+                        <div className="min-w-0 flex-1">
                           <h4 className={`font-bold text-lg truncate pr-2 ${!isPublic && isManager ? 'opacity-50' : ''}`}>
                             {track.title}
                           </h4>
-                          <p className="text-xs opacity-60 uppercase tracking-wider">{new Date(track.created_at || Date.now()).toLocaleDateString()}</p>
+
+                          {/* PROGRESS BAR - Only visible when playing */}
+                          {isPlaying ? (
+                            <div className="flex items-center gap-3 mt-1 pr-4 animate-in fade-in slide-in-from-left-2">
+                              <span className="text-[10px] font-mono opacity-60 w-8 text-right">{formatTime(currentTime)}</span>
+                              <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={progress}
+                                onChange={(e) => handleSeek(e, track.id)}
+                                className="flex-1 h-1.5 bg-black/10 dark:bg-white/10 rounded-full appearance-none cursor-pointer accent-foreground"
+                              />
+                              <span className="text-[10px] font-mono opacity-60 w-8">{formatTime(duration)}</span>
+                            </div>
+                          ) : (
+                            <p className="text-xs opacity-60 uppercase tracking-wider">{new Date(track.created_at || Date.now()).toLocaleDateString()}</p>
+                          )}
                         </div>
                       </div>
 
                       {/* Actions */}
-                      <div className="flex gap-2 shrink-0 items-center">
-                        {/* Download / Open in New Tab */}
-                        <a
-                          href={track.audio_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                      <div className="flex gap-2 shrink-0 items-center pl-2">
+                        <button
+                          onClick={() => handleDownload(track)}
                           className="p-2 opacity-40 hover:opacity-100 transition-opacity"
+                          title="Download File"
                         >
                           <Download size={20} />
-                        </a>
+                        </button>
 
-                        {/* Manager Only Actions */}
                         {isManager && (
                           <>
-                            {/* Visibility Toggle */}
                             <button
                               onClick={() => toggleTrackVisibility(track)}
                               className={`p-2 transition-all hover:bg-black/5 rounded-lg ${isPublic ? 'opacity-100 text-foreground' : 'opacity-100 text-red-500'}`}
@@ -469,7 +541,6 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
                               {isPublic ? <Eye size={20} /> : <EyeOff size={20} />}
                             </button>
 
-                            {/* Delete */}
                             <button onClick={() => deleteTrack(track)} className="p-2 text-red-500 opacity-60 hover:opacity-100 hover:bg-red-500/10 rounded-lg transition-all">
                               <Trash2 size={20} />
                             </button>
@@ -477,7 +548,19 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
                         )}
                       </div>
                     </div>
-                    <audio ref={(el) => { audioRefs.current[track.id] = el }} src={track.audio_url} onEnded={() => setPlayingTrackId(null)} className="hidden" />
+
+                    {/* Audio Element with Event Listeners */}
+                    <audio
+                      ref={(el) => { audioRefs.current[track.id] = el }}
+                      src={track.audio_url}
+                      onTimeUpdate={(e) => handleTimeUpdate(e, track.id)} // Pass ID
+                      onLoadedMetadata={(e) => handleLoadedMetadata(e, track.id)} // Pass ID
+                      onEnded={() => {
+                        setPlayingTrackId(null);
+                        setProgress(0);
+                      }}
+                      className="hidden"
+                    />
                   </div>
                 );
               })

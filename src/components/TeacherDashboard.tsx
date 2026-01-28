@@ -6,7 +6,7 @@ import {
     Users, Music, BookOpen, MessageSquare,
     Save, Loader2, Play, Pause, ExternalLink,
     Globe, EyeOff, Lock, ChevronDown, ChevronUp,
-    Mail, Phone, UserRound, Contact
+    Mail, Phone, UserRound, Contact, Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -67,24 +67,77 @@ function StudentRow({ student, tracks }: any) {
     const [homework, setHomework] = useState(student.current_assignments || "");
     const [note, setNote] = useState(student.current_note || "");
     const [isSaving, setIsSaving] = useState(false);
-    const [isExpanded, setIsExpanded] = useState(false); // Mobile Tucking State
+    const [isExpanded, setIsExpanded] = useState(false);
     const [showContact, setShowContact] = useState(false);
 
+    // --- AUDIO STATE ---
     const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
-    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [progress, setProgress] = useState(0);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({});
 
-    const handlePlayToggle = (e: React.MouseEvent, track: any) => {
-        e.stopPropagation(); // Prevents collapsing the row when clicking play
-        if (activeTrackId === track.id) {
-            audioRef.current?.pause();
+    // --- AUDIO HANDLERS ---
+    const handlePlayToggle = (e: React.MouseEvent, trackId: string) => {
+        e.stopPropagation();
+        const audio = audioRefs.current[trackId];
+        if (!audio) return;
+
+        if (activeTrackId === trackId) {
+            audio.pause();
             setActiveTrackId(null);
         } else {
-            setActiveTrackId(track.id);
-            if (audioRef.current) {
-                audioRef.current.src = track.audio_url;
-                audioRef.current.play();
+            if (activeTrackId && audioRefs.current[activeTrackId]) {
+                audioRefs.current[activeTrackId]?.pause();
+            }
+            audio.play();
+            setActiveTrackId(trackId);
+            
+            // Reset for new track
+            setCurrentTime(audio.currentTime);
+            setProgress(0);
+            if (!isNaN(audio.duration) && isFinite(audio.duration)) {
+                setDuration(audio.duration);
+            } else {
+                setDuration(0);
             }
         }
+    };
+
+    const handleTimeUpdate = (e: React.SyntheticEvent<HTMLAudioElement>, trackId: string) => {
+        if (trackId !== activeTrackId) return;
+        const audio = e.currentTarget;
+        if (audio.duration && isFinite(audio.duration)) {
+            setCurrentTime(audio.currentTime);
+            setProgress((audio.currentTime / audio.duration) * 100);
+        }
+    };
+
+    const handleLoadedMetadata = (e: React.SyntheticEvent<HTMLAudioElement>, trackId: string) => {
+        if (trackId !== activeTrackId) return;
+        const audio = e.currentTarget;
+        if (isFinite(audio.duration)) {
+            setDuration(audio.duration);
+        }
+    };
+
+    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>, trackId: string) => {
+        e.stopPropagation();
+        const newProgress = parseFloat(e.target.value);
+        const audio = audioRefs.current[trackId];
+        if (audio && audio.duration && isFinite(audio.duration)) {
+            const newTime = (newProgress / 100) * audio.duration;
+            audio.currentTime = newTime;
+            setProgress(newProgress);
+            setCurrentTime(newTime);
+        }
+    };
+
+    const formatTime = (time: number) => {
+        if (isNaN(time) || !isFinite(time)) return "0:00";
+        const minutes = Math.floor(time / 60);
+        const seconds = Math.floor(time % 60);
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     };
 
     const handleUpdate = async () => {
@@ -104,9 +157,7 @@ function StudentRow({ student, tracks }: any) {
             initial={false}
             className="rounded-[2rem] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 shadow-lg overflow-hidden"
         >
-            <audio ref={audioRef} onEnded={() => setActiveTrackId(null)} className="hidden" />
-
-            {/* 1. COMPACT HEADER (Always Visible) */}
+            {/* 1. COMPACT HEADER */}
             <div
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="p-5 md:p-8 cursor-pointer lg:cursor-default flex items-center justify-between group"
@@ -120,6 +171,7 @@ function StudentRow({ student, tracks }: any) {
                         <div className="flex items-center gap-3">
                             <Link
                                 href={`/${student.slug}`}
+                                onClick={(e) => e.stopPropagation()}
                                 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-zinc-200"
                             >
                                 @{student.slug}
@@ -132,8 +184,6 @@ function StudentRow({ student, tracks }: any) {
                         </div>
                     </div>
                 </div>
-
-                {/* Mobile-Only Indicator */}
                 <div className="lg:hidden p-2 rounded-full bg-zinc-50 dark:bg-black/40 text-zinc-400">
                     {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                 </div>
@@ -150,19 +200,14 @@ function StudentRow({ student, tracks }: any) {
                     >
                         <div className="px-5 pb-8 md:px-10 md:pb-10 grid lg:grid-cols-12 gap-8 border-t border-zinc-100 dark:border-white/5 pt-8">
 
-                            {/* Profile & Music (Left) */}
+                            {/* Left Column: Contact & Tracks */}
                             <div className="lg:col-span-5 space-y-6">
-
-                                {/* Contact Controls */}
+                                {/* Contact */}
                                 <div className="space-y-3">
-                                    <button
-                                        onClick={() => setShowContact(!showContact)}
-                                        className="w-full p-4 flex items-center justify-between rounded-2xl bg-zinc-50 dark:bg-black/40 border border-zinc-100 dark:border-white/5 text-xs font-black uppercase tracking-widest text-zinc-500"
-                                    >
+                                    <button onClick={() => setShowContact(!showContact)} className="w-full p-4 flex items-center justify-between rounded-2xl bg-zinc-50 dark:bg-black/40 border border-zinc-100 dark:border-white/5 text-xs font-black uppercase tracking-widest text-zinc-500">
                                         <span className="flex items-center gap-2"><Contact size={14} /> Contact Details</span>
                                         {showContact ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                     </button>
-
                                     <AnimatePresence>
                                         {showContact && (
                                             <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden space-y-2">
@@ -176,42 +221,77 @@ function StudentRow({ student, tracks }: any) {
                                     </AnimatePresence>
                                 </div>
 
-                                {/* Track List */}
+                                {/* Tracks List with Player */}
                                 <div className="space-y-3">
                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Recordings</h4>
-                                    <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                                        {tracks.map((track: any) => (
-                                            <div key={track.id} className="p-4 rounded-2xl bg-zinc-50 dark:bg-black/40 flex items-center justify-between">
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-bold truncate pr-4">{track.title}</p>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        {track.is_public ? <Globe size={10} className="text-green-500" /> : <EyeOff size={10} className="text-zinc-500" />}
-                                                        <span className="text-[10px] text-zinc-400">{new Date(track.created_at).toLocaleDateString()}</span>
+                                    <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                        {tracks.map((track: any) => {
+                                            const isPlaying = activeTrackId === track.id;
+                                            return (
+                                                <div key={track.id} className={`p-4 rounded-2xl transition-all ${isPlaying ? 'bg-zinc-900 text-white' : 'bg-zinc-50 dark:bg-black/40'}`}>
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <div className="flex items-center gap-3 overflow-hidden">
+                                                            <button onClick={(e) => handlePlayToggle(e, track.id)} className={`p-3 rounded-full shrink-0 ${isPlaying ? 'bg-white text-black' : 'bg-zinc-200 dark:bg-zinc-700'}`}>
+                                                                {isPlaying ? <Pause size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />}
+                                                            </button>
+                                                            <div className="min-w-0">
+                                                                <p className="text-sm font-bold truncate">{track.title}</p>
+                                                                <div className="flex items-center gap-2 mt-0.5">
+                                                                    {track.is_public ? <Globe size={10} className={isPlaying ? "text-green-400" : "text-green-500"} /> : <EyeOff size={10} className="opacity-50" />}
+                                                                    <span className="text-[10px] opacity-60 uppercase">{new Date(track.created_at).toLocaleDateString()}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <a href={track.audio_url} target="_blank" download className="p-2 opacity-50 hover:opacity-100"><Download size={16} /></a>
                                                     </div>
+
+                                                    {/* Progress Bar (Only visible when active) */}
+                                                    {isPlaying && (
+                                                        <div className="flex items-center gap-3 mt-2 px-1 animate-in fade-in slide-in-from-top-1">
+                                                            <span className="text-[10px] font-mono opacity-60 w-8 text-right">{formatTime(currentTime)}</span>
+                                                            <input
+                                                                type="range"
+                                                                min="0"
+                                                                max="100"
+                                                                step="0.1"
+                                                                value={progress}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                onChange={(e) => handleSeek(e, track.id)}
+                                                                className="flex-1 h-1 bg-white/20 rounded-full appearance-none cursor-pointer accent-white"
+                                                            />
+                                                            <span className="text-[10px] font-mono opacity-60 w-8">{formatTime(duration)}</span>
+                                                        </div>
+                                                    )}
+
+                                                    <audio
+                                                        ref={(el) => { audioRefs.current[track.id] = el }}
+                                                        src={track.audio_url}
+                                                        onTimeUpdate={(e) => handleTimeUpdate(e, track.id)}
+                                                        onLoadedMetadata={(e) => handleLoadedMetadata(e, track.id)}
+                                                        onEnded={() => { setActiveTrackId(null); setProgress(0); }}
+                                                        className="hidden"
+                                                    />
                                                 </div>
-                                                <button onClick={(e) => handlePlayToggle(e, track)} className="p-3 rounded-full bg-foreground text-background">
-                                                    {activeTrackId === track.id ? <Pause size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />}
-                                                </button>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Dashboard Controls (Right) */}
+                            {/* Right Column: Dashboard Controls */}
                             <div className="lg:col-span-7 flex flex-col gap-6">
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Assignments</label>
-                                        <textarea value={homework} onChange={(e) => setHomework(e.target.value)} className="w-full min-h-[150px] p-4 bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/5 rounded-2xl text-sm font-bold resize-none" />
+                                        <textarea value={homework} onChange={(e) => setHomework(e.target.value)} className="w-full min-h-[150px] p-4 bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/5 rounded-2xl text-sm font-bold resize-none focus:ring-2 focus:ring-blue-500 outline-none" />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Teacher's Note</label>
-                                        <textarea value={note} onChange={(e) => setNote(e.target.value)} className="w-full min-h-[150px] p-4 bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/5 rounded-2xl text-sm font-medium italic resize-none" />
+                                        <textarea value={note} onChange={(e) => setNote(e.target.value)} className="w-full min-h-[150px] p-4 bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/5 rounded-2xl text-sm font-medium italic resize-none focus:ring-2 focus:ring-purple-500 outline-none" />
                                     </div>
                                 </div>
-                                <button onClick={handleUpdate} disabled={isSaving} className="w-full py-5 rounded-2xl bg-foreground text-background font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2">
-                                    {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} Save Records
+                                <button onClick={handleUpdate} disabled={isSaving} className="w-full py-5 rounded-2xl bg-foreground text-background font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+                                    {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} Save
                                 </button>
                             </div>
 

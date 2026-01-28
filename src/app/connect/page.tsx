@@ -122,7 +122,7 @@ export default function ConnectPage() {
                                 name="inquiry_type" 
                                 className="w-full appearance-none bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl py-4 px-4 font-medium text-foreground focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer"
                             >
-                                <option value="Teacher Inquiry">Teacher Account Inquiry</option>
+                                <option value="Teacher Inquiry">I Am Interested in an Account</option>
                                 <option value="School Pricing">School / Bulk Pricing</option>
                                 <option value="General">General Question</option>
                                 <option value="Bug">Technical Support</option>

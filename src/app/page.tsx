@@ -66,34 +66,40 @@ export default function Home() {
     }
   };
 
-  useEffect(() => {
-    const initYT = () => {
-      if (!iframeRef.current || !window.YT) return;
-      playerRef.current = new window.YT.Player(iframeRef.current, {
-        events: {
-          onReady: (e: any) => {
-            e.target.mute();
-          }
-        }
-      });
-    };
 
-    if (!window.YT) {
-      const tag = document.createElement('script');
-      tag.src = "https://www.youtube.com/iframe_api";
-      const firstScriptTag = document.getElementsByTagName('script')[0];
-      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-      window.onYouTubeIframeAPIReady = initYT;
-    } else {
-      initYT();
-    }
+  
+  //useEffect(() => {
+    //const initYT = () => {
+      //if (!iframeRef.current || !window.YT) return;
+      //playerRef.current = new window.YT.Player(iframeRef.current, {
+        //events: {
+          //onReady: (e: any) => {
+            //e.target.mute();
+          //}
+        //}
+      //});
+    //};
 
-    return () => {
-      if (playerRef.current && playerRef.current.destroy) {
-        playerRef.current.destroy();
-      }
-    };
-  }, []);
+    
+    //if (!window.YT) {
+  //    const tag = document.createElement('script');
+//      tag.src = "https://www.youtube.com/iframe_api";
+  //    const firstScriptTag = document.getElementsByTagName('script')[0];
+    //  firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+      //window.onYouTubeIframeAPIReady = initYT;
+  //  } else {
+    //  initYT();
+   // }
+
+ //   return () => {
+   //   if (playerRef.current && playerRef.current.destroy) {
+     //   playerRef.current.destroy();
+//      }
+ //   };
+ // }, []);
+
+
+  
 
   return (
     <main className="relative flex flex-col items-center overflow-x-hidden pt-32 pb-20">
