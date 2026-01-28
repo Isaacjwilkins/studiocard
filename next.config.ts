@@ -1,10 +1,6 @@
 import type { NextConfig } from "next";
 
-// We removed the ": NextConfig" type annotation here to bypass the error
-const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
