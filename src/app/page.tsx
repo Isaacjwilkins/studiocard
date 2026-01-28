@@ -306,7 +306,7 @@ export default function Home() {
             We Build Your Stage.
           </h3>
           <p className="text-xl md:text-2xl text-zinc-600 dark:text-zinc-400 font-light">
-            Your recording instantly publishes to your personal <strong>Studio Card</strong>. Share it with family and friends via studiocard.org/<span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-red-400">you</span>
+            Your recording instantly publishes to your personal <strong>Studio Card</strong>. Share it with family and friends via studiocard.live/<span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-red-400">you</span>
           </p>
         </div>
 

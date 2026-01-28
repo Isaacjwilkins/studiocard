@@ -10,16 +10,32 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Studio Card | Share Your Music Journey",
-  description: "The platform for music students to capture practice, share progress, and feel like a professional.",
-};
+  title: "studio.card | Share Your Practice Live",
+  description: "The platform for students to record their practice, share it easily, and feel like a professional.",
+
+
+  openGraph: {
+    title: 'studio.card',
+    description: 'Share Your Practice Live',
+    siteName: 'studio.card',
+    images: [
+      {
+        url: 'https://studiocard.live/aaw2.png', // Must be an absolute URL
+        width: 1200,
+        height: 630,
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <Background /> 
+          <Background />
           <Navbar />
           <div className="relative z-10 flex flex-col min-h-screen">
             <main className="flex-grow">
