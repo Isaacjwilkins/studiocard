@@ -333,7 +333,7 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl w-full max-w-sm shadow-2xl">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-sm uppercase tracking-widest">Artist Access</h3>
+              <h3 className="font-bold text-sm uppercase tracking-widest">Student Access</h3>
               <button onClick={() => setShowLogin(false)}><X size={20} /></button>
             </div>
             <input type="password" placeholder="Enter Passcode"
@@ -579,11 +579,12 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
                   </div>
                 </div>
                 <button
-                  onClick={() => window.location.href = '/students'}
+                  onClick={() => (window.location.href = "/students#profile-editor")}
                   className="px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-colors bg-white/10 hover:bg-white/20 text-foreground"
                 >
                   Manage
                 </button>
+
               </div>
             </div>
           )}

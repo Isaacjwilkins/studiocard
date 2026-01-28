@@ -118,7 +118,7 @@ export default function Home() {
       {/* 1. NARRATIVE HERO */}
       <section className="relative w-full max-w-5xl px-6 mb-32 flex flex-col items-center text-center z-10">
         <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-zinc-500 dark:text-zinc-400 mb-6">
-          Make Your Music Official
+          Make Your Practice Official
         </h2>
 
         <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-foreground mb-8 leading-[0.9]">

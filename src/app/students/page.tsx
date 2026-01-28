@@ -4,16 +4,15 @@ import { useState, useRef, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
 import { supabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Sparkles, Share2, Palette, Music, User, 
-  Lock, Globe, Instagram, Youtube, Smile, 
+import {
+  Sparkles, Share2, Palette, Music, User,
+  Lock, Globe, Instagram, Youtube, Smile,
   CheckCircle2, Loader2, Camera, Plus, X,
   Twitter, Linkedin, Facebook, Link as LinkIcon, Cloud, ChevronDown, ArrowRight, Upload,
-  GraduationCap, AtSign
+  GraduationCap, AtSign, ArrowDown // Added ArrowDown for the button
 } from "lucide-react";
 
 // --- CONSTANTS ---
-// Doubled the colors as requested
 const COLORS = [
   { name: "Ocean", hex: "#3b82f6", class: "bg-blue-500" },
   { name: "Sky", hex: "#0ea5e9", class: "bg-sky-500" },
@@ -46,16 +45,16 @@ const base64ToBlob = async (url: string) => {
 
 export default function StudentsPage() {
   // --- STATE ---
-  const [mode, setMode] = useState<'login' | 'signup'>('signup'); // Default to Sign Up
+  const [mode, setMode] = useState<'login' | 'signup'>('signup');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  
+
   // Auth State
-  const [isVerified, setIsVerified] = useState(false); 
+  const [isVerified, setIsVerified] = useState(false);
   const [artistId, setArtistId] = useState<string | null>(null);
 
   // Form Toggles
-  const [showSocials, setShowSocials] = useState(false); 
+  const [showSocials, setShowSocials] = useState(false);
 
   // Photo State
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -65,23 +64,35 @@ export default function StudentsPage() {
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
 
   // Data State
-  // Used for both Login credentials AND New User creation
   const [creds, setCreds] = useState({ fullName: '', passcode: '', slug: '', teacherSlug: '' });
-  
+
   const [formData, setFormData] = useState({
     bio: '',
     color: COLORS[0].hex,
-    icon: '', // Optional now
+    icon: '',
     isPrivate: false,
-    socials: { 
-      instagram: '', youtube: '', tiktok: '', 
-      website: '', twitter: '', linkedin: '', 
-      snapchat: '', facebook: '', spotify: '', 
-      apple_music: '', soundcloud: '' 
+    socials: {
+      instagram: '', youtube: '', tiktok: '',
+      website: '', twitter: '', linkedin: '',
+      snapchat: '', facebook: '', spotify: '',
+      apple_music: '', soundcloud: ''
     }
   });
 
   // --- HANDLERS ---
+
+  // NEW: Scroll Handler
+  const scrollToForm = () => {
+    const element = document.getElementById("profile-editor");
+    if (!element) return;
+
+    const yOffset = -20; // 👈 distance ABOVE the element (px)
+    const y =
+      element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+
+    window.scrollTo({ top: y, behavior: "smooth" });
+  };
+
 
   const onCropComplete = useCallback((_area: any, pixels: any) => {
     setCroppedAreaPixels(pixels);
@@ -115,11 +126,11 @@ export default function StudentsPage() {
   const findTeacherId = async (teacherSlug: string): Promise<string | null> => {
     if (!teacherSlug) return null;
     const { data, error } = await supabase
-      .from('teachers') // Assuming teachers are in the artists table
+      .from('teachers')
       .select('id')
       .eq('slug', teacherSlug)
       .single();
-    
+
     if (error || !data) {
       console.warn("Teacher not found");
       return null;
@@ -148,8 +159,7 @@ export default function StudentsPage() {
 
       setArtistId(artist.id);
       setIsVerified(true);
-      
-      // Pre-fill form
+
       setFormData({
         bio: artist.bio || '',
         color: artist.card_color || COLORS[0].hex,
@@ -169,8 +179,6 @@ export default function StudentsPage() {
           soundcloud: artist.soundcloud || ''
         }
       });
-      // Pre-fill slug/teacher code not usually editable here unless requested, 
-      // but we leave them blank in creds for now as they are structural.
 
       const hasSocials = [artist.instagram, artist.youtube, artist.tiktok, artist.website].some(s => s && s.length > 0);
       if (hasSocials) setShowSocials(true);
@@ -192,7 +200,6 @@ export default function StudentsPage() {
       let currentArtistId = artistId;
       let teacherId = null;
 
-      // A. Handle Teacher Lookup (for both Sign Up and Edit if provided)
       if (creds.teacherSlug) {
         teacherId = await findTeacherId(creds.teacherSlug);
         if (!teacherId && creds.teacherSlug.length > 0) {
@@ -203,9 +210,7 @@ export default function StudentsPage() {
         }
       }
 
-      // B. Handle Sign Up (CREATE)
       if (mode === 'signup' && !isVerified) {
-        // 1. Check Slug Uniqueness
         const { data: existingSlug } = await supabase.from('artists').select('id').eq('slug', creds.slug).single();
         if (existingSlug) {
           alert(`The URL "${creds.slug}" is already taken. Please choose another.`);
@@ -213,14 +218,13 @@ export default function StudentsPage() {
           return;
         }
 
-        // 2. Insert New User
         const { data: newUser, error: createError } = await supabase
           .from('artists')
           .insert([{
             full_name: creds.fullName,
             passcode: creds.passcode,
             slug: creds.slug,
-            teacher_id: teacherId, // Link teacher
+            teacher_id: teacherId,
             card_color: formData.color,
             is_private: formData.isPrivate,
             created_at: new Date().toISOString()
@@ -231,15 +235,11 @@ export default function StudentsPage() {
         if (createError) throw createError;
         currentArtistId = newUser.id;
         setArtistId(newUser.id);
-      } 
-      // C. Handle Update (EDIT)
+      }
       else if (currentArtistId && creds.teacherSlug) {
-         // If editing and they added a teacher code
-         await supabase.from('artists').update({ teacher_id: teacherId }).eq('id', currentArtistId);
+        await supabase.from('artists').update({ teacher_id: teacherId }).eq('id', currentArtistId);
       }
 
-
-      // D. Upload Image (Common to both)
       let finalProfileImage = formData.icon;
       if (formData.icon.startsWith('data:image') && currentArtistId) {
         const fileBlob = await base64ToBlob(formData.icon);
@@ -250,7 +250,6 @@ export default function StudentsPage() {
         finalProfileImage = urlData.publicUrl;
       }
 
-      // E. Update Profile Data
       if (currentArtistId) {
         const { error: updateError } = await supabase
           .from('artists')
@@ -259,7 +258,6 @@ export default function StudentsPage() {
             profile_image_url: finalProfileImage,
             bio: formData.bio,
             is_private: formData.isPrivate,
-            // Socials
             instagram: formData.socials.instagram || null,
             youtube: formData.socials.youtube || null,
             tiktok: formData.socials.tiktok || null,
@@ -290,19 +288,30 @@ export default function StudentsPage() {
   // --- RENDER ---
   return (
     <main className="min-h-screen pt-32 pb-20 px-6 overflow-hidden">
-      
+
       {/* HERO SECTION */}
-      <section className="max-w-4xl mx-auto text-center mb-24 animate-in slide-in-from-bottom-4 duration-700">
+      <section className="max-w-4xl mx-auto text-center mb-12 animate-in slide-in-from-bottom-4 duration-700">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 font-bold text-xs uppercase tracking-widest mb-6">
           <Sparkles size={14} /> For Students
         </div>
         <h1 className="text-6xl md:text-7xl font-black tracking-tighter text-foreground mb-8">
-          Show off your <br/>
+          Show off your <br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500">Super Skills.</span>
         </h1>
-        <p className="text-xl text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto leading-relaxed">
+        <p className="text-xl text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto leading-relaxed mb-10">
           Practicing is hard work. You deserve to show it off! Create your own Studio Card, upload your songs, and share them with your friends and family.
         </p>
+
+        {/* NEW: GO BUTTON (High Visibility Version) */}
+        <button
+          onClick={scrollToForm}
+          className="group relative inline-flex items-center gap-3 px-10 py-5 rounded-full shadow-xl shadow-purple-500/30 hover:scale-105 hover:shadow-purple-500/50 transition-all duration-300 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500"
+        >
+          <span className="text-2xl font-black uppercase tracking-widest text-white">
+            GO
+          </span>
+          <ArrowDown className="text-white group-hover:translate-y-1 transition-transform" strokeWidth={3} size={24} />
+        </button>
       </section>
 
       {/* FEATURES GRID */}
@@ -326,7 +335,8 @@ export default function StudentsPage() {
 
       {/* 3. PROFILE EDITOR / ONBOARDING */}
       <section id="profile-editor" className="max-w-3xl mx-auto pt-16 border-t border-zinc-200 dark:border-zinc-800">
-        
+        {/* ... Rest of your code remains exactly the same ... */}
+
         {/* CROP MODAL */}
         <AnimatePresence>
           {imageToCrop && (
@@ -371,148 +381,148 @@ export default function StudentsPage() {
             </div>
 
             <div className="space-y-8 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-xl border border-zinc-200 dark:border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl transition-all">
-              
+
               {/* STEP 1: INITIAL INPUTS */}
               {/* If Signup: Show full form immediately. If Login: Show verify form first. */}
-              
+
               {!isVerified && mode === 'login' ? (
-                 <form onSubmit={handleVerify} className="space-y-6">
-                   <div className="grid md:grid-cols-2 gap-6">
-                     <div className="space-y-2">
-                       <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Your Name</label>
-                       <div className="relative">
-                         <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-                         <input required value={creds.fullName} onChange={(e) => setCreds({ ...creds, fullName: e.target.value })} placeholder="Full Name" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
-                       </div>
-                     </div>
-                     <div className="space-y-2">
-                       <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Passcode</label>
-                       <div className="relative">
-                         <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-                         <input required value={creds.passcode} onChange={(e) => setCreds({ ...creds, passcode: e.target.value })} placeholder="1234" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
-                       </div>
-                     </div>
-                   </div>
-                   <button disabled={loading} className="w-full py-4 rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-black font-bold uppercase tracking-widest hover:scale-[1.01] transition-transform flex items-center justify-center gap-2">
-                     {loading ? <Loader2 className="animate-spin" /> : <>Find My Profile <ArrowRight size={16}/></>}
-                   </button>
-                 </form>
+                <form onSubmit={handleVerify} className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Your Name</label>
+                      <div className="relative">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+                        <input required value={creds.fullName} onChange={(e) => setCreds({ ...creds, fullName: e.target.value })} placeholder="Full Name" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Passcode</label>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+                        <input required value={creds.passcode} onChange={(e) => setCreds({ ...creds, passcode: e.target.value })} placeholder="1234" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+                      </div>
+                    </div>
+                  </div>
+                  <button disabled={loading} className="w-full py-4 rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-black font-bold uppercase tracking-widest hover:scale-[1.01] transition-transform flex items-center justify-center gap-2">
+                    {loading ? <Loader2 className="animate-spin" /> : <>Find My Profile <ArrowRight size={16} /></>}
+                  </button>
+                </form>
               ) : (
                 /* FULL FORM (For Signup OR Verified Login) */
                 <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                    
-                    {/* CREDENTIALS SECTION */}
-                    <div className="grid md:grid-cols-2 gap-6">
-                       <div className="space-y-2">
-                         <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Full Name</label>
-                         <div className="relative">
-                           <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-                           <input required disabled={mode === 'login'} value={creds.fullName} onChange={(e) => setCreds({ ...creds, fullName: e.target.value })} placeholder="Leo Piano" className={`w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all ${mode === 'login' ? 'opacity-50' : ''}`} />
-                         </div>
-                       </div>
-                       <div className="space-y-2">
-                         <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Passcode</label>
-                         <div className="relative">
-                           <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-                           <input required disabled={mode === 'login'} value={creds.passcode} onChange={(e) => setCreds({ ...creds, passcode: e.target.value })} placeholder="1234" className={`w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all ${mode === 'login' ? 'opacity-50' : ''}`} />
-                         </div>
-                       </div>
-                       
-                       {/* NEW FIELDS FOR SIGN UP / TEACHER CODE */}
-                       {mode === 'signup' && (
-                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Your Custom URL (Slug)</label>
-                            <div className="relative">
-                              <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-                              <input required value={creds.slug} onChange={(e) => setCreds({ ...creds, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })} placeholder="leo-piano" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
-                            </div>
-                         </div>
-                       )}
-                       <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Teacher Code (Optional)</label>
-                          <div className="relative">
-                            <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-                            <input value={creds.teacherSlug} onChange={(e) => setCreds({ ...creds, teacherSlug: e.target.value })} placeholder="Enter Teacher's Slug" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-purple-500 transition-all" />
-                          </div>
-                       </div>
-                    </div>
 
-                    <div className="h-px w-full bg-zinc-200 dark:bg-zinc-800" />
-                    
-                    {/* THEME & PHOTO */}
-                    <div className="space-y-6">
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4 flex items-center gap-2"><Palette size={12} /> Theme Color</label>
-                        <div className="flex flex-wrap gap-3">
-                          {COLORS.map((c) => (
-                            <button type="button" key={c.hex} onClick={() => setFormData({ ...formData, color: c.hex })} className={`w-8 h-8 rounded-full transition-transform hover:scale-110 border-2 ${c.class} ${formData.color === c.hex ? 'border-foreground scale-110 ring-2 ring-offset-2 ring-foreground/20' : 'border-transparent'}`} />
-                          ))}
-                        </div>
+                  {/* CREDENTIALS SECTION */}
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Full Name</label>
+                      <div className="relative">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+                        <input required disabled={mode === 'login'} value={creds.fullName} onChange={(e) => setCreds({ ...creds, fullName: e.target.value })} placeholder="Leo Piano" className={`w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all ${mode === 'login' ? 'opacity-50' : ''}`} />
                       </div>
-
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4 flex items-center gap-2"><Camera size={12} /> Profile Photo (Recommended)</label>
-                        <div className="flex items-center gap-6">
-                           <div className="relative group shrink-0">
-                             <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
-                             <button type="button" onClick={() => fileInputRef.current?.click()} className={`w-24 h-24 rounded-3xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border-4 border-white dark:border-zinc-700 shadow-xl flex items-center justify-center relative transition-all hover:scale-105 ${!formData.icon ? 'border-dashed border-zinc-300' : ''}`}>
-                                {formData.icon ? <img src={formData.icon} alt="Profile" className="w-full h-full object-cover" /> : <User className="text-zinc-300" size={32} />}
-                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"><Upload className="text-white" size={20} /></div>
-                             </button>
-                           </div>
-                           <div className="space-y-2">
-                              <button type="button" onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-zinc-200 transition-colors">Select Image</button>
-                           </div>
-                        </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Passcode</label>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+                        <input required disabled={mode === 'login'} value={creds.passcode} onChange={(e) => setCreds({ ...creds, passcode: e.target.value })} placeholder="1234" className={`w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all ${mode === 'login' ? 'opacity-50' : ''}`} />
                       </div>
                     </div>
 
-                    {/* BIO & SOCIALS */}
-                    <div className="space-y-4">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Mini Bio</label>
-                      <textarea value={formData.bio} onChange={(e) => setFormData({ ...formData, bio: e.target.value })} placeholder="Tell us about yourself..." rows={3} className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none" />
-
-                      <button type="button" onClick={() => setShowSocials(!showSocials)} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-foreground transition-colors pl-4 mt-6">
-                        {showSocials ? "Hide Social Links" : "Add Social Links"} <ChevronDown size={14} className={`transition-transform duration-300 ${showSocials ? "rotate-180" : ""}`} />
-                      </button>
-
-                      <AnimatePresence>
-                        {showSocials && (
-                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-                              <div className="relative"><Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} /><input value={formData.socials.instagram} onChange={(e) => setFormData({ ...formData, socials: { ...formData.socials, instagram: e.target.value } })} placeholder="Instagram" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-xl py-3 pl-10 pr-3 text-sm font-medium focus:ring-2 focus:ring-pink-500 outline-none" /></div>
-                              <div className="relative"><Youtube className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} /><input value={formData.socials.youtube} onChange={(e) => setFormData({ ...formData, socials: { ...formData.socials, youtube: e.target.value } })} placeholder="YouTube" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-xl py-3 pl-10 pr-3 text-sm font-medium focus:ring-2 focus:ring-red-500 outline-none" /></div>
-                              <div className="relative"><Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} /><input value={formData.socials.website} onChange={(e) => setFormData({ ...formData, socials: { ...formData.socials, website: e.target.value } })} placeholder="Website" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-xl py-3 pl-10 pr-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none" /></div>
-                              <div className="relative"><Music className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} /><input value={formData.socials.tiktok} onChange={(e) => setFormData({ ...formData, socials: { ...formData.socials, tiktok: e.target.value } })} placeholder="TikTok" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-xl py-3 pl-10 pr-3 text-sm font-medium focus:ring-2 focus:ring-black outline-none" /></div>
-                              {/* Add more socials as needed */}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-
-                    {/* PRIVACY TOGGLE */}
-                    <div className="flex items-center justify-between bg-zinc-100 dark:bg-zinc-800/50 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-700/50">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-full ${formData.isPrivate ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
-                          {formData.isPrivate ? <Lock size={18} /> : <Globe size={18} />}
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-sm text-foreground">{formData.isPrivate ? 'Private Profile' : 'Public Profile'}</h4>
-                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">{formData.isPrivate ? 'Only people with passcode can view' : 'Anyone can view your card'}</p>
+                    {/* NEW FIELDS FOR SIGN UP / TEACHER CODE */}
+                    {mode === 'signup' && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Your Custom URL (Slug)</label>
+                        <div className="relative">
+                          <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+                          <input required value={creds.slug} onChange={(e) => setCreds({ ...creds, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })} placeholder="leo-piano" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
                         </div>
                       </div>
-                      <button type="button" onClick={() => setFormData({ ...formData, isPrivate: !formData.isPrivate })} className={`relative w-14 h-8 rounded-full transition-colors duration-300 ${formData.isPrivate ? 'bg-red-500' : 'bg-green-500'}`}>
-                        <div className={`absolute top-1 left-1 bg-white w-6 h-6 rounded-full shadow-md transition-transform duration-300 ${formData.isPrivate ? 'translate-x-6' : 'translate-x-0'}`} />
-                      </button>
+                    )}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Teacher Code (Optional)</label>
+                      <div className="relative">
+                        <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+                        <input value={creds.teacherSlug} onChange={(e) => setCreds({ ...creds, teacherSlug: e.target.value })} placeholder="Enter Teacher's Slug" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-purple-500 transition-all" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="h-px w-full bg-zinc-200 dark:bg-zinc-800" />
+
+                  {/* THEME & PHOTO */}
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4 flex items-center gap-2"><Palette size={12} /> Theme Color</label>
+                      <div className="flex flex-wrap gap-3">
+                        {COLORS.map((c) => (
+                          <button type="button" key={c.hex} onClick={() => setFormData({ ...formData, color: c.hex })} className={`w-8 h-8 rounded-full transition-transform hover:scale-110 border-2 ${c.class} ${formData.color === c.hex ? 'border-foreground scale-110 ring-2 ring-offset-2 ring-foreground/20' : 'border-transparent'}`} />
+                        ))}
+                      </div>
                     </div>
 
-                    <button 
-                      disabled={loading} 
-                      className="w-full py-5 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-black text-sm uppercase tracking-[0.2em] shadow-xl hover:scale-[1.01] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-                    >
-                      {loading ? <Loader2 className="animate-spin" /> : (mode === 'signup' ? "Create Account" : "Save Changes")}
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4 flex items-center gap-2"><Camera size={12} /> Profile Photo (Recommended)</label>
+                      <div className="flex items-center gap-6">
+                        <div className="relative group shrink-0">
+                          <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+                          <button type="button" onClick={() => fileInputRef.current?.click()} className={`w-24 h-24 rounded-3xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border-4 border-white dark:border-zinc-700 shadow-xl flex items-center justify-center relative transition-all hover:scale-105 ${!formData.icon ? 'border-dashed border-zinc-300' : ''}`}>
+                            {formData.icon ? <img src={formData.icon} alt="Profile" className="w-full h-full object-cover" /> : <User className="text-zinc-300" size={32} />}
+                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"><Upload className="text-white" size={20} /></div>
+                          </button>
+                        </div>
+                        <div className="space-y-2">
+                          <button type="button" onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-zinc-200 transition-colors">Select Image</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* BIO & SOCIALS */}
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Mini Bio</label>
+                    <textarea value={formData.bio} onChange={(e) => setFormData({ ...formData, bio: e.target.value })} placeholder="Tell us about yourself..." rows={3} className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none" />
+
+                    <button type="button" onClick={() => setShowSocials(!showSocials)} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-foreground transition-colors pl-4 mt-6">
+                      {showSocials ? "Hide Social Links" : "Add Social Links"} <ChevronDown size={14} className={`transition-transform duration-300 ${showSocials ? "rotate-180" : ""}`} />
                     </button>
+
+                    <AnimatePresence>
+                      {showSocials && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                            <div className="relative"><Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} /><input value={formData.socials.instagram} onChange={(e) => setFormData({ ...formData, socials: { ...formData.socials, instagram: e.target.value } })} placeholder="Instagram" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-xl py-3 pl-10 pr-3 text-sm font-medium focus:ring-2 focus:ring-pink-500 outline-none" /></div>
+                            <div className="relative"><Youtube className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} /><input value={formData.socials.youtube} onChange={(e) => setFormData({ ...formData, socials: { ...formData.socials, youtube: e.target.value } })} placeholder="YouTube" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-xl py-3 pl-10 pr-3 text-sm font-medium focus:ring-2 focus:ring-red-500 outline-none" /></div>
+                            <div className="relative"><Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} /><input value={formData.socials.website} onChange={(e) => setFormData({ ...formData, socials: { ...formData.socials, website: e.target.value } })} placeholder="Website" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-xl py-3 pl-10 pr-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none" /></div>
+                            <div className="relative"><Music className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} /><input value={formData.socials.tiktok} onChange={(e) => setFormData({ ...formData, socials: { ...formData.socials, tiktok: e.target.value } })} placeholder="TikTok" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-xl py-3 pl-10 pr-3 text-sm font-medium focus:ring-2 focus:ring-black outline-none" /></div>
+                            {/* Add more socials as needed */}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* PRIVACY TOGGLE */}
+                  <div className="flex items-center justify-between bg-zinc-100 dark:bg-zinc-800/50 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-700/50">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-full ${formData.isPrivate ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                        {formData.isPrivate ? <Lock size={18} /> : <Globe size={18} />}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-foreground">{formData.isPrivate ? 'Private Profile' : 'Public Profile'}</h4>
+                        <p className="text-[10px] text-zinc-500 uppercase tracking-wider">{formData.isPrivate ? 'Only people with passcode can view' : 'Anyone can view your card'}</p>
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => setFormData({ ...formData, isPrivate: !formData.isPrivate })} className={`relative w-14 h-8 rounded-full transition-colors duration-300 ${formData.isPrivate ? 'bg-red-500' : 'bg-green-500'}`}>
+                      <div className={`absolute top-1 left-1 bg-white w-6 h-6 rounded-full shadow-md transition-transform duration-300 ${formData.isPrivate ? 'translate-x-6' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+
+                  <button
+                    disabled={loading}
+                    className="w-full py-5 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-black text-sm uppercase tracking-[0.2em] shadow-xl hover:scale-[1.01] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                  >
+                    {loading ? <Loader2 className="animate-spin" /> : (mode === 'signup' ? "Create Account" : "Save Changes")}
+                  </button>
 
                 </form>
               )}

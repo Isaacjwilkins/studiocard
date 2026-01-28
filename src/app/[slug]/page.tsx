@@ -39,7 +39,7 @@ export default async function ArtistPage({ params }: { params: Promise<{ slug: s
           ←
         </Link>
         <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
-          studio.card Artist
+          studio.card
         </div>
       </div>
 
