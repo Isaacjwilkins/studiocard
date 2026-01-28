@@ -47,8 +47,11 @@ export default function ConnectPage() {
       {/* GRID LAYOUT: Contact Info + Form */}
       <div className="grid md:grid-cols-12 gap-12">
         
-        {/* LEFT: Context / Info */}
-        <div className="md:col-span-4 space-y-8">
+        {/* LEFT: Context / Info 
+            CHANGE: Added 'order-2 md:order-1'
+            RESULT: Pushes this to the bottom on mobile, keeps it left on desktop
+        */}
+        <div className="md:col-span-4 space-y-8 order-2 md:order-1">
             <div className="p-8 rounded-3xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/10">
                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                     <HelpCircle size={20} className="text-blue-500" /> Support
@@ -74,8 +77,11 @@ export default function ConnectPage() {
             </div>
         </div>
 
-        {/* RIGHT: The Form */}
-        <div className="md:col-span-8">
+        {/* RIGHT: The Form 
+            CHANGE: Added 'order-1 md:order-2'
+            RESULT: Pulls this to the top on mobile, keeps it right on desktop
+        */}
+        <div className="md:col-span-8 order-1 md:order-2">
             <div className="relative overflow-hidden rounded-[2.5rem] border border-zinc-200 dark:border-white/10 bg-white/50 dark:bg-black/40 backdrop-blur-xl p-8 md:p-12 shadow-2xl">
                 {success ? (
                 <div className="py-24 text-center space-y-6 animate-in fade-in zoom-in duration-500">
