@@ -26,7 +26,7 @@ export default function SongCard({ song, defaultExpanded = false }: SongCardProp
 
   const cinematicTransition = {
     duration: 0.7,
-    ease: [0.16, 1, 0.3, 1]
+    ease: [0.16, 1, 0.3, 1] as const
   };
 
   return (
