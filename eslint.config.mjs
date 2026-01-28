@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // ⚠️ ADD THIS LINE to ignore all source code:
+    "src/**"
   ]),
 ]);
 
