@@ -14,6 +14,10 @@ export const metadata: Metadata = {
   description: "The platform for students to record their practice, share it easily, and feel like a professional.",
 
 
+  icons: {
+    icon: '/aaw2.png', // Assumes aaw2.png is in your 'public' folder
+  },
+
   openGraph: {
     title: 'studio.card',
     description: 'Share Your Practice Live',
