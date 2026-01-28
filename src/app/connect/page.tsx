@@ -65,9 +65,9 @@ export default function ConnectPage() {
                 </p>
             </div>
             
-            <div className="p-6 rounded-3xl bg-blue-500 text-white shadow-xl shadow-blue-500/20">
+            <div className="p-6 rounded-3xl bg-red-500/80 text-white shadow-xl shadow-red-500/20">
                 <h4 className="font-bold text-lg mb-2">Join the Community</h4>
-                <p className="text-blue-100 text-sm mb-4">Follow us for updates on new features and featured students.</p>
+                <p className="text-red-100 text-sm mb-4">Follow us for updates on new features and featured students.</p>
                 <div className="flex gap-4 opacity-80">
                     <span className="text-xs font-bold uppercase tracking-widest">@studiocard</span>
                 </div>
@@ -99,7 +99,7 @@ export default function ConnectPage() {
                             <input 
                                 name="full_name" 
                                 required 
-                                placeholder="Jane Doe" 
+                                placeholder="Your Name" 
                                 className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl py-4 px-4 font-medium text-foreground focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
                             />
                         </div>
@@ -109,7 +109,7 @@ export default function ConnectPage() {
                                 name="email" 
                                 type="email" 
                                 required 
-                                placeholder="jane@studio.com" 
+                                placeholder="example@gmail.com" 
                                 className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl py-4 px-4 font-medium text-foreground focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
                             />
                         </div>
@@ -124,9 +124,8 @@ export default function ConnectPage() {
                             >
                                 <option value="Teacher Inquiry">Teacher Account Inquiry</option>
                                 <option value="School Pricing">School / Bulk Pricing</option>
-                                <option value="Support">Technical Support</option>
                                 <option value="General">General Question</option>
-                                <option value="Bug">Report a Bug</option>
+                                <option value="Bug">Technical Support</option>
                             </select>
                             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
                                 <ArrowRight size={16} className="rotate-90" />

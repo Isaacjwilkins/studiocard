@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   ArrowRight, Play, Share2,
-  Mic2, Home as HomeIcon, Video, UserCheck
+  Mic2, Home as HomeIcon, Video, UserCheck, Square, Flame, Check, Music, CloudLightning
 } from 'lucide-react';
 
 // --- MOCK DATA (Students with Multiple Tracks) ---
@@ -138,70 +138,106 @@ export default function Home() {
       </section>
 
       {/* 2. THE JOURNEY (Visual Timeline) */}
-      <div className="w-full max-w-5xl px-6 md:px-12 py-16 md:py-24 rounded-[3rem] border-y border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-white/5 backdrop-blur-sm shadow-2xl relative mb-24">
+      <div className="w-full max-w-5xl px-6 md:px-12 py-16 md:py-8 rounded-[3rem] border-y border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-white/5 backdrop-blur-sm shadow-2xl relative mb-24">
 
         {/* The Vertical Guide Line */}
         <div className="absolute left-10 md:left-1/2 top-24 bottom-24 w-px bg-gradient-to-b from-transparent via-zinc-400 dark:via-zinc-600 to-transparent md:-translate-x-1/2 opacity-50" />
 
         {/* STEP 1: PRACTICE (Home/Warm) */}
         <div className="relative grid md:grid-cols-2 gap-8 md:gap-16 mb-32 group">
+          {/* Timeline Dot */}
           <div className="absolute left-10 md:left-1/2 w-4 h-4 bg-background border-2 border-foreground rounded-full -translate-x-[7.5px] md:-translate-x-1/2 mt-1.5 z-10 group-hover:scale-125 transition-transform duration-500" />
+
+          {/* Text Content */}
           <div className="pl-16 md:pl-0 md:text-right md:pr-12">
             <div className="inline-flex items-center gap-2 mb-3 text-zinc-400 font-mono text-xs uppercase tracking-widest">
               <span className="md:hidden">01.</span> Step 01
             </div>
-            <h3 className="text-3xl font-bold text-foreground mb-4">You Perfect It.</h3>
-            <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              This part happens at home. Master your scales, polish that sonata, and get ready to show what you can do.
+            <h3 className="text-3xl font-bold text-foreground mb-4">Practice makes Perfect.</h3>
+            <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed mb-6">
+              This part happens at home. Master your scales, polish that sonata, and get ready to show what you can do, all guided by
+              your teacher: both at your lesson, and at home through studio.card.
             </p>
+            <div className="flex md:justify-end gap-4">
+              <div className="flex flex-col items-center">
+                <div className="text-2xl font-black text-foreground">25</div>
+                <div className="text-[10px] text-zinc-400 uppercase font-bold tracking-tighter">Mins Today</div>
+              </div>
+              <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-800 self-center" />
+              <div className="flex flex-col items-center">
+                <div className="text-2xl font-black text-orange-500">12</div>
+                <div className="text-[10px] text-zinc-400 uppercase font-bold tracking-tighter">Day Streak</div>
+              </div>
+            </div>
           </div>
+
+          {/* Desktop Visual: The Practice Card */}
           <div className="pl-16 md:pl-8">
-            <div className="p-8 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-100/50 dark:from-orange-900/20 dark:to-amber-900/10 border border-orange-200 dark:border-orange-500/20 relative overflow-hidden group-hover:border-orange-500/40 transition-colors h-64 flex flex-col justify-between">
-              <div className="flex justify-between items-start">
-                <HomeIcon size={32} className="text-orange-500" />
-                <span className="px-3 py-1 rounded-full bg-white/50 dark:bg-black/20 text-[10px] font-bold uppercase tracking-widest text-orange-600">At Home</span>
-              </div>
-              <div className="relative w-full h-24 bg-white/40 dark:bg-black/20 rounded-xl border border-white/20 flex items-center justify-center">
-                <div className="text-4xl">🎹</div>
-              </div>
-              <div className="absolute -right-4 -bottom-4 text-9xl font-black text-orange-500/10 opacity-50 select-none">01</div>
+            <div className="h-[380px] w-full max-w-[320px] transform group-hover:rotate-1 transition-transform duration-500">
+              <PracticeCardComponent
+                artist={{
+                  name: "Alex Rivers",
+                  handle: "arivers",
+                  color: "#f59e0b", // Amber/Orange
+                  imageColor: "bg-orange-500",
+                  avatar: "🎹"
+                }}
+              />
             </div>
           </div>
         </div>
 
         {/* STEP 2: CAPTURE (Studio/Cool) */}
         <div className="relative grid md:grid-cols-2 gap-8 md:gap-16 mb-32 group">
+          {/* Timeline Dot */}
           <div className="absolute left-10 md:left-1/2 w-4 h-4 bg-background border-2 border-zinc-400 rounded-full -translate-x-[7.5px] md:-translate-x-1/2 mt-1.5 z-10 group-hover:scale-125 transition-transform duration-500" />
+
+          {/* Desktop Visual: The Recording Card */}
           <div className="pl-16 md:pl-0 md:text-right md:pr-12 hidden md:block">
-            <div className="p-8 rounded-2xl bg-gradient-to-br from-indigo-50 to-violet-100/50 dark:from-indigo-900/20 dark:to-violet-900/10 border border-indigo-200 dark:border-indigo-500/20 relative overflow-hidden group-hover:border-indigo-500/40 transition-colors h-64 flex flex-col justify-between">
-              <div className="flex justify-between items-start">
-                <Mic2 size={32} className="text-indigo-500" />
-                <span className="px-3 py-1 rounded-full bg-white/50 dark:bg-black/20 text-[10px] font-bold uppercase tracking-widest text-indigo-600">The Studio</span>
-              </div>
-              <div className="flex items-center justify-center gap-1 h-24">
-                {[1, 3, 2, 4, 3, 5, 2, 3, 1, 2].map((h, i) => (
-                  <div key={i} className="w-2 bg-indigo-500/50 rounded-full" style={{ height: `${h * 10}%` }} />
-                ))}
-              </div>
-              <div className="absolute -left-4 -bottom-4 text-9xl font-black text-indigo-500/10 opacity-50 select-none">02</div>
+            <div className="h-[380px] w-full max-w-[320px] ml-auto transform group-hover:-rotate-1 transition-transform duration-500">
+              <RecordingCardComponent
+                artist={{
+                  name: "Alex Rivers",
+                  handle: "arivers",
+                  color: "#6366f1", // Indigo
+                  imageColor: "bg-indigo-500",
+                  avatar: "🎙️"
+                }}
+              />
             </div>
           </div>
+
+          {/* Text Content */}
           <div className="pl-16 md:pl-8">
             <div className="inline-flex items-center gap-2 mb-3 text-zinc-400 font-mono text-xs uppercase tracking-widest">
               <span className="md:hidden">02.</span> Step 02
             </div>
             <h3 className="text-3xl font-bold text-foreground mb-4">You Capture It.</h3>
             <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
-              Record your practice session right when you feel ready. No pressure, no scheduling.
+              Record your practice session right when you feel ready. Retry as many times as you want. No pressure, no scheduling—just you and your instrument.
             </p>
-            <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
-              <UserCheck size={16} /> Sends directly to your Teacher
-            </p>
+            <div className="space-y-3">
+              <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
+                <UserCheck size={16} /> Sends directly to your Teacher
+              </p>
+              <p className="text-sm font-medium text-zinc-500 flex items-center gap-2">
+                <Mic2 size={16} /> Studio-grade audio processing
+              </p>
+            </div>
           </div>
+
+          {/* Mobile Visual: The Recording Card (Smaller) */}
           <div className="pl-16 md:hidden">
-            <div className="p-6 rounded-2xl bg-indigo-50 dark:bg-white/5 border border-indigo-200">
-              <Mic2 size={24} className="text-indigo-600 mb-2" />
-              <p className="text-xs text-indigo-400">Action: Record</p>
+            <div className="h-[320px] w-full">
+              <RecordingCardComponent
+                artist={{
+                  name: "Alex Rivers",
+                  handle: "arivers",
+                  color: "#6366f1",
+                  imageColor: "bg-indigo-500",
+                  avatar: "🎙️"
+                }}
+              />
             </div>
           </div>
         </div>
@@ -217,10 +253,10 @@ export default function Home() {
             </div>
             <h3 className="text-3xl font-black text-foreground mb-4">You go live instantly.</h3>
             <p className="text-lg text-zinc-700 dark:text-zinc-300 leading-relaxed mb-6">
-              Your recording instantly publishes to your personal <strong>Studio Card</strong>.
+              Your recording instantly publishes to your personal <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-red-400">studio.card</span>.
             </p>
             <p className="text-sm text-zinc-500 mb-2">
-              Share your link with family, friends, and your teacher to show off your hard work.
+              Share your link with family and friends to show off your hard work. And if you don't love it, keep it private and to yourself. Your teacher gets everything automatically. 
             </p>
           </div>
 
@@ -264,7 +300,7 @@ export default function Home() {
             We Build Your Stage.
           </h3>
           <p className="text-xl md:text-2xl text-zinc-600 dark:text-zinc-400 font-light">
-            Your recording instantly publishes to your personal <strong>Studio Card</strong>. Share it with family, friends, and your teacher.
+            Your recording instantly publishes to your personal <strong>Studio Card</strong>. Share it with family and friends via studiocard.org/<span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-red-400">you</span>
           </p>
         </div>
 
@@ -281,14 +317,14 @@ export default function Home() {
             <div className="relative w-full h-full bg-zinc-100 dark:bg-zinc-800">
               {/* LIGHT MODE IMAGE */}
               <Image
-                src="/webcardd.png"
+                src="/webcard1.png"
                 alt="Website Preview Back"
                 fill
                 className="object-cover object-top opacity-80 dark:hidden"
               />
               {/* DARK MODE IMAGE - Update filename if needed */}
               <Image
-                src="/webcard.png"
+                src="/webcard1d.png"
                 alt="Website Preview Back Dark"
                 fill
                 className="object-cover object-top opacity-80 hidden dark:block"
@@ -309,14 +345,14 @@ export default function Home() {
             <div className="relative w-full h-full bg-white dark:bg-black">
               {/* LIGHT MODE IMAGE */}
               <Image
-                src="/webcardd.png"
+                src="/webcard.png"
                 alt="Website Preview Front"
                 fill
                 className="object-cover object-top dark:hidden"
               />
               {/* DARK MODE IMAGE - Update filename if needed */}
               <Image
-                src="/webcard.png"
+                src="/webcardd.png"
                 alt="Website Preview Front Dark"
                 fill
                 className="object-cover object-top hidden dark:block"
@@ -325,11 +361,25 @@ export default function Home() {
           </div>
 
         </div>
-      
 
-    </section>
 
-      {/* 4. VIDEO SECTION */ }
+      </section>
+
+      <section className="relative w-full max-w-5xl px-6 mb-32 flex flex-col items-center text-center z-10">
+
+        <div className="flex flex-wrap justify-center gap-4">
+          <Link href="/students" className="group flex items-center gap-3 px-8 py-4 bg-foreground text-background rounded-full font-bold text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-xl">
+            I'm a Student <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+          </Link>
+          <Link href="/teachers" className="group flex items-center gap-3 px-8 py-4 border border-zinc-300 dark:border-zinc-700 rounded-full font-bold text-xs uppercase tracking-widest hover:bg-zinc-100 dark:hover:bg-white/10 transition-all">
+            For Teachers
+          </Link>
+        </div>
+      </section>
+
+
+
+      {/* 
   <section className="w-full max-w-5xl pt-12 px-6 mb-12 text-center">
     <div className="mb-10 space-y-3">
       <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-zinc-500">
@@ -361,44 +411,46 @@ export default function Home() {
     </div>
   </section>
 
-  {/* 5. PHILOSOPHY SECTION */ }
-  <section className="w-full max-w-5xl px-6 py-12">
-    <div className="flex justify-center">
-      <button
-        onClick={() => setOpen(!open)}
-        className="px-4 py-2 rounded-full border border-zinc-200 dark:border-white/10 bg-zinc-50/60 dark:bg-white/5 backdrop-blur-sm text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100/60 dark:hover:bg-white/10 transition"
-      >
-        About Me {open ? "−" : "+"}
-      </button>
-    </div>
+  */}
 
-    {open && (
-      <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-        <div className="relative w-full md:w-auto">
-          <Image src="/profile.png" alt="Isaac Wilkins" width={400} height={600} className="rounded-2xl border border-zinc-200 dark:border-white/10 shadow-xl" priority />
+      {/* 5. PHILOSOPHY SECTION */}
+      <section className="w-full max-w-5xl px-6 py-12">
+        <div className="flex justify-center">
+          <button
+            onClick={() => setOpen(!open)}
+            className="px-4 py-2 rounded-full border border-zinc-200 dark:border-white/10 bg-zinc-50/60 dark:bg-white/5 backdrop-blur-sm text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100/60 dark:hover:bg-white/10 transition"
+          >
+            About Me {open ? "−" : "+"}
+          </button>
         </div>
-        <div className="text-right flex flex-col items-end">
-          <div className="max-w-xl space-y-6">
-            <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-zinc-400">Our Belief</h2>
-            <blockquote className="text-3xl md:text-5xl font-medium leading-tight tracking-tighter text-foreground">Music is a Journey</blockquote>
-            <p className="text-lg text-zinc-800 dark:text-zinc-200 leading-relaxed">
-              As a pianist and student myself, I know that 99% of music happens in the practice room.
-              I built Studio Card so that the effort you put in doesn't disappear into thin air.
-            </p>
-            <div className="pt-2">
-              <a href="https://isaacwilkins.com/music" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-zinc-500 hover:text-foreground transition-colors border-b border-transparent hover:border-foreground pb-0.5">
-                Listen to my work Here
-              </a>
+
+        {open && (
+          <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+            <div className="relative w-full md:w-auto">
+              <Image src="/profile.png" alt="Isaac Wilkins" width={400} height={600} className="rounded-2xl border border-zinc-200 dark:border-white/10 shadow-xl" priority />
+            </div>
+            <div className="text-right flex flex-col items-end">
+              <div className="max-w-xl space-y-6">
+                <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-zinc-400">Our Belief</h2>
+                <blockquote className="text-3xl md:text-5xl font-medium leading-tight tracking-tighter text-foreground">Music is a Journey</blockquote>
+                <p className="text-lg text-zinc-800 dark:text-zinc-200 leading-relaxed">
+                  As a pianist and student myself, I know that 99% of music happens in the practice room.
+                  I built Studio Card so that the effort you put in doesn't disappear into thin air.
+                </p>
+                <div className="pt-2">
+                  <a href="https://isaacwilkins.com/music" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-zinc-500 hover:text-foreground transition-colors border-b border-transparent hover:border-foreground pb-0.5">
+                    Listen to my work Here
+                  </a>
+                </div>
+              </div>
+              <div className="relative mt-10 w-56 h-20 opacity-80">
+                <Image src="/signature.png" alt="Signature" fill priority className="object-contain dark:hidden" />
+                <Image src="/signaturew1.png" alt="Signature" fill priority className="object-contain hidden dark:block" />
+              </div>
             </div>
           </div>
-          <div className="relative mt-10 w-56 h-20 opacity-80">
-            <Image src="/signature.png" alt="Signature" fill priority className="object-contain dark:hidden" />
-            <Image src="/signaturew1.png" alt="Signature" fill priority className="object-contain hidden dark:block" />
-          </div>
-        </div>
-      </div>
-    )}
-  </section>
+        )}
+      </section>
     </main >
   );
 }
@@ -456,6 +508,162 @@ function CardComponent({ artist }: { artist: any }) {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+function RecordingCardComponent({ artist }: { artist: any }) {
+  return (
+    <div className="relative w-full h-full rounded-2xl border border-zinc-200 dark:border-white/10 shadow-2xl overflow-hidden bg-white dark:bg-black flex flex-col">
+      {/* Dynamic Color Tint */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.05] dark:opacity-[0.15]" style={{ backgroundColor: artist.color }} />
+
+      {/* Shimmer */}
+      <div className="absolute inset-0 z-40 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 dark:via-white/10 to-transparent animate-shimmer" />
+      </div>
+
+      {/* Browser Header */}
+      <div className="h-8 border-b border-zinc-100/50 dark:border-white/5 flex items-center justify-between px-4 relative z-20 shrink-0">
+        <div className="flex gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-red-400" />
+          <div className="w-2 h-2 rounded-full bg-yellow-400" />
+          <div className="w-2 h-2 rounded-full bg-green-400" />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          <div className="text-[8px] text-zinc-400 font-mono tracking-tighter uppercase font-bold">Live Session</div>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="relative w-full flex-1 p-4 flex flex-col items-center">
+        {/* Inner Gradient */}
+        <div className="absolute inset-0 z-0 opacity-20" style={{ background: `linear-gradient(to bottom, ${hexToRgba(artist.color, 0.1)}, transparent)` }} />
+
+        {/* Card Content */}
+        <div className="relative z-10 w-full h-full backdrop-blur-md rounded-[1.5rem] p-4 shadow-xl flex flex-col items-center text-center border overflow-hidden" style={{ backgroundColor: hexToRgba(artist.color, 0.4), borderColor: hexToRgba(artist.color, 0.2) }}>
+
+          {/* Pulsing Avatar */}
+          <div className="relative mb-3 shrink-0">
+            <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
+            <div className={`w-16 h-16 rounded-full ${artist.imageColor} relative overflow-hidden shadow-2xl border-4 border-white/20 flex items-center justify-center`}>
+              <span className="text-3xl">{artist.avatar || "🎙️"}</span>
+            </div>
+          </div>
+
+          <div className="font-black text-lg text-foreground tracking-tight leading-tight shrink-0">
+            {artist.name}
+          </div>
+          <div className="text-[9px] font-bold text-red-500 dark:text-red-400 uppercase tracking-[0.2em] mb-4 shrink-0 animate-pulse">
+            Recording...
+          </div>
+
+          {/* Waveform Visualizer */}
+          <div className="w-full flex-1 flex items-center justify-center gap-1 px-4 mb-4">
+            {[0.4, 0.7, 0.3, 0.9, 0.5, 0.8, 0.4, 0.6, 0.2].map((height, i) => (
+              <div
+                key={i}
+                className="w-1.5 bg-foreground/80 rounded-full animate-waveform"
+                style={{
+                  height: `${height * 100}%`,
+                  animationDelay: `${i * 0.1}s`
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Controls */}
+          <div className="w-full flex flex-col gap-2 shrink-0">
+            <div className="text-[10px] font-mono text-foreground/60 tabular-nums">02:45 / 04:00</div>
+            <div className="w-full py-2 rounded-lg bg-red-500 text-white text-[8px] font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-lg active:scale-95 transition-transform">
+              <Square size={8} fill="currentColor" /> Stop Recording
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CSS for the Waveform Animation */}
+      <style>{`
+        @keyframes waveform {
+          0%, 100% { transform: scaleY(0.5); }
+          50% { transform: scaleY(1.2); }
+        }
+        .animate-waveform {
+          animation: waveform 0.6s ease-in-out infinite;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+
+function PracticeCardComponent({ artist }: { artist: any }) {
+  return (
+    <div className="relative w-full h-full rounded-2xl border border-zinc-200 dark:border-white/10 shadow-2xl overflow-hidden bg-white dark:bg-black flex flex-col text-left">
+      {/* Dynamic Color Tint */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.05] dark:opacity-[0.15]" style={{ backgroundColor: artist.color }} />
+
+      {/* Browser Header */}
+      <div className="h-8 border-b border-zinc-100/50 dark:border-white/5 flex items-center px-4 relative z-20 shrink-0">
+        <div className="flex gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-red-400" />
+          <div className="w-2 h-2 rounded-full bg-yellow-400" />
+          <div className="w-2 h-2 rounded-full bg-green-400" />
+        </div>
+        <div className="ml-3 text-[8px] text-zinc-400 font-mono italic">studio.card/alexrivers</div>
+      </div>
+
+      {/* Body */}
+      <div className="relative w-full flex-1 p-3 flex flex-col">
+        {/* Inner Card Wrapper */}
+        <div className="relative z-10 w-full h-full backdrop-blur-md rounded-[1.2rem] p-4 shadow-xl border overflow-hidden flex flex-col gap-3"
+          style={{ backgroundColor: hexToRgba(artist.color, 0.2), borderColor: hexToRgba(artist.color, 0.1) }}>
+
+          {/* Header Info */}
+          <div className="flex items-center gap-3 mb-1">
+            <div className={`w-10 h-10 rounded-full ${artist.imageColor} shadow-lg border-2 border-white/20 flex items-center justify-center shrink-0`}>
+              <span className="text-xl">{artist.avatar || "🎹"}</span>
+            </div>
+            <div>
+              <div className="font-black text-xs text-foreground leading-none">{artist.name}</div>
+              <div className="text-[8px] text-foreground/50 font-bold uppercase tracking-wider">Active Lesson Plan</div>
+            </div>
+          </div>
+
+          {/* Teacher's Note (Inspired by your code) */}
+          <div className="p-3 rounded-lg bg-white/40 dark:bg-black/20 border-l-[3px] shadow-sm" style={{ borderLeftColor: artist.color }}>
+            <h4 className="text-[7px] font-black uppercase tracking-widest mb-1.5 flex items-center gap-1.5 text-foreground/70">
+              <Music size={8} style={{ color: artist.color }} /> Teacher's Note
+            </h4>
+            <p className="text-[9px] font-medium leading-relaxed italic text-foreground/80">
+              "Focus on the transition in measure 14. Keep your wrist loose!"
+            </p>
+          </div>
+
+          {/* Current Assignments (Inspired by your code) */}
+          <div className="p-3 rounded-lg bg-white/60 dark:bg-black/40 border-l-[3px] shadow-sm flex-1" style={{ borderLeftColor: artist.color }}>
+            <h4 className="text-[7px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5 text-foreground/70">
+              <CloudLightning size={8} style={{ color: artist.color }} /> Current Assignments
+            </h4>
+            <div className="space-y-2">
+              <div className="flex items-start gap-2">
+                <div className="w-3 h-3 rounded-sm border border-foreground/20 mt-0.5" />
+                <p className="text-[9px] font-bold text-foreground">G Major Arpeggios (2 Octaves)</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="w-3 h-3 rounded-sm border border-foreground/20 mt-0.5" />
+                <p className="text-[9px] font-bold text-foreground">Clair de Lune (First 2 Pages)</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="w-full py-2 mt-auto rounded-lg bg-foreground text-background text-[8px] font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-md">
+            Mark Session Complete
           </div>
         </div>
       </div>

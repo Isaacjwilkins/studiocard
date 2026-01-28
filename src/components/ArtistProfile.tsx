@@ -3,12 +3,10 @@
 import { useState, useRef } from "react";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
-import { motion, AnimatePresence } from "framer-motion";
 import {
-  Download, Share2, Play, Pause, Globe, Instagram, Youtube, Check,
-  Twitter, Linkedin, Facebook, Ghost, Music, CloudLightning, BadgeCheck, Star,
+  Download, Play, Pause, Globe, Instagram, CloudLightning, BadgeCheck, Star,
   Lock, Unlock, Mic, UploadCloud, Loader2, Trash2, StopCircle, X, 
-  Eye, EyeOff // <--- Add these two
+  Eye, EyeOff, Music, Zap // <--- Added Music back here
 } from 'lucide-react';
 // --- Types ---
 interface Track {
@@ -19,7 +17,7 @@ interface Track {
   description: string | null;
   artist_id: string;
   created_at?: string;
-  is_public: boolean; // <--- This was missing
+  is_public: boolean; // Maps to your database column
 }
 
 interface Artist {
@@ -66,7 +64,6 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
 
   // UI State
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({});
 
   // Security State
@@ -120,52 +117,39 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
     }
   };
 
-  // --- UPDATED ACTIONS ---
-
-  // 1. FIXED PRIVACY TOGGLE: Now selects the data back to ensure DB updated successfully
-  const togglePrivacy = async () => {
-    try {
-      const newValue = !artist.is_private;
-      const { data, error } = await supabase
-        .from('artists')
-        .update({ is_private: newValue })
-        .eq('id', artist.id)
-        .select() // Important: asks Supabase to return the updated row
-        .single();
-
-      if (error) throw error;
-      if (data) setArtist(data); // Update state with real DB result
-    } catch (err: any) {
-      alert("Error updating privacy settings: " + err.message);
-    }
-  };
-
-  // 2. NEW: TRACK VISIBILITY TOGGLE
+  // 1. TRACK VISIBILITY TOGGLE (Robust with Error Handling)
   const toggleTrackVisibility = async (track: Track) => {
     try {
-      const newValue = !track.is_private;
-      // Optimistic UI update (makes it feel instant)
-      setTracks(tracks.map(t => t.id === track.id ? { ...t, is_private: newValue } : t));
+      // Logic: If null/undefined, treat as FALSE (hidden), then toggle
+      const currentStatus = track.is_public === true; 
+      const newValue = !currentStatus;
 
+      // Optimistic UI Update
+      setTracks(currentTracks => 
+        currentTracks.map(t => t.id === track.id ? { ...t, is_public: newValue } : t)
+      );
+
+      // Database Update
       const { error } = await supabase
         .from('tracks')
-        .update({ is_private: newValue })
+        .update({ is_public: newValue })
         .eq('id', track.id);
 
+      // Error Handling
       if (error) {
-        // Revert on error
-        setTracks(tracks.map(t => t.id === track.id ? { ...t, is_private: !newValue } : t));
-        alert("Error updating visibility");
+        console.error("Supabase Save Error:", error.message);
+        alert(`Could not save visibility: ${error.message}`);
+        
+        // Revert UI if save failed
+        setTracks(currentTracks => 
+          currentTracks.map(t => t.id === track.id ? { ...t, is_public: currentStatus } : t)
+        );
       }
     } catch (err) {
-      console.error(err);
+      console.error("Unexpected Error:", err);
+      alert("An unexpected error occurred.");
     }
   };
-
-  // 3. FILTERING: Only show public tracks if not a manager
-  const displayedTracks = isManager 
-    ? tracks 
-    : tracks.filter(t => t.is_public !== false); // Default to visible if null
 
   const deleteTrack = async (track: Track) => {
     if (!confirm("Delete this track?")) return;
@@ -173,6 +157,13 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
     if (error) alert("Error: " + error.message);
     else await refreshTracks();
   };
+
+  // 2. FILTERING: Logic updated for default=false
+  // If Manager: Show all tracks.
+  // If Public: Show ONLY tracks where is_public === true.
+  const displayedTracks = isManager 
+    ? tracks 
+    : tracks.filter(t => t.is_public === true); 
 
   // --- RECORDER ---
   const startRecording = async () => {
@@ -213,9 +204,16 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
       const { error: uploadError } = await supabase.storage.from("audio-tracks").upload(fileName, audioBlob);
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from("audio-tracks").getPublicUrl(fileName);
+      
+      // Default new uploads to FALSE (hidden) unless you want them public immediately
       const { error: dbError } = await supabase.from("tracks").insert([{
-        artist_id: artist.id, title: trackTitle, audio_url: urlData.publicUrl, release_date: new Date().toISOString()
+        artist_id: artist.id, 
+        title: trackTitle, 
+        audio_url: urlData.publicUrl, 
+        release_date: new Date().toISOString(), 
+        is_public: false // Default to Hidden
       }]);
+      
       if (dbError) throw dbError;
       await refreshTracks();
       setAudioBlob(null); setPreviewUrl(null); setTrackTitle(""); setUploadMode("hidden");
@@ -239,13 +237,6 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
       audio.play();
       setPlayingTrackId(trackId);
     }
-  };
-
-  const handleShare = async () => {
-    const url = window.location.href;
-    const shareData = { title: `${artist.full_name} on WilkinStudio`, text: `Listen to ${artist.full_name}.`, url: url };
-    if (navigator.share && navigator.canShare(shareData)) { try { await navigator.share(shareData); } catch (err) { console.error(err); } }
-    else { try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch (err) { console.error(err); } }
   };
 
   const SocialLink = ({ href, icon: Icon, colorClass }: { href: string | null, icon: any, colorClass: string }) => {
@@ -296,8 +287,6 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
         </div>
       )}
 
-      
-
       {/* 4. MAIN LAYOUT GRID */}
       <div className="grid md:grid-cols-[280px_1fr] gap-12 items-start">
 
@@ -312,8 +301,8 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
           {/* Badges - Hidden on Mobile Manager */}
           {(artist.is_verified || artist.is_premium) && (
             <div className={`flex flex-wrap justify-center gap-2 my-1 ${isManager ? 'hidden md:flex' : 'flex'}`}>
-              {artist.is_verified && <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 border border-white/10"><BadgeCheck className="text-blue-500" size={14} /><span className="text-[10px] font-bold uppercase text-foreground/80">Verified</span></div>}
-              {artist.is_premium && <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 border border-white/10"><Star className="text-amber-500 fill-amber-500" size={12} /><span className="text-[10px] font-bold uppercase text-foreground/80">Premium</span></div>}
+              {artist.is_verified && <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 border border-white/10"><BadgeCheck className="text-blue-500" size={14} /><span className="text-[10px] font-bold uppercase text-foreground/80">5 Day Streak</span></div>}
+              {artist.is_premium && <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 border border-white/10"><Zap className="text-amber-500 fill-amber-500" size={12} /><span className="text-[10px] font-bold uppercase text-foreground/80">Pro</span></div>}
             </div>
           )}
 
@@ -331,9 +320,6 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
             {isManager ? <Unlock size={16} /> : <Lock size={16} />}
             {isManager ? "Exit Practice Mode" : "Practice Mode"}
           </button>
-
-
-
 
           {/* Socials - Hidden on Mobile Manager */}
           <div className={`flex flex-wrap justify-center gap-2 w-full px-2 ${isManager ? 'hidden md:flex' : 'flex'}`}>
@@ -428,10 +414,10 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
             </div>
           )}
 
-{/* TRACK LIST - Always Visible */}
-<div className="space-y-4 pt-4">
+          {/* TRACK LIST - Always Visible */}
+          <div className="space-y-4 pt-4">
             <h3 className="text-xs font-bold uppercase tracking-[0.3em] opacity-50 mb-2 text-center md:text-left">Recordings</h3>
-            
+
             {!displayedTracks.length ? (
               <p className="italic opacity-50 text-center md:text-left">
                 {isManager ? "No tracks yet." : "No public tracks available."}
@@ -439,17 +425,20 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
             ) : (
               displayedTracks.map((track) => {
                 const isPlaying = playingTrackId === track.id;
+                // Default to false (hidden) if null/undefined
+                const isPublic = track.is_public === true;
+
                 return (
                   <div key={track.id} className={`relative p-4 rounded-2xl border transition-all ${isPlaying ? 'bg-white/20 border-foreground/20' : 'bg-black/5 dark:bg-white/5 border-transparent'}`}>
                     <div className="flex items-center justify-between mb-3">
-                      
+
                       {/* Play Button & Title */}
                       <div className="flex items-center gap-4 overflow-hidden">
                         <button onClick={() => handlePlayToggle(track.id)} className="w-12 h-12 shrink-0 rounded-full bg-foreground text-background flex items-center justify-center shadow-lg">
                           {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-1" />}
                         </button>
                         <div className="min-w-0">
-                          <h4 className={`font-bold text-lg truncate pr-2 ${!track.is_public && isManager ? 'opacity-50' : ''}`}>
+                          <h4 className={`font-bold text-lg truncate pr-2 ${!isPublic && isManager ? 'opacity-50' : ''}`}>
                             {track.title}
                           </h4>
                           <p className="text-xs opacity-60 uppercase tracking-wider">{new Date(track.created_at || Date.now()).toLocaleDateString()}</p>
@@ -459,10 +448,10 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
                       {/* Actions */}
                       <div className="flex gap-2 shrink-0 items-center">
                         {/* Download / Open in New Tab */}
-                        <a 
-                          href={track.audio_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
+                        <a
+                          href={track.audio_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="p-2 opacity-40 hover:opacity-100 transition-opacity"
                         >
                           <Download size={20} />
@@ -472,12 +461,12 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
                         {isManager && (
                           <>
                             {/* Visibility Toggle */}
-                            <button 
-                              onClick={() => toggleTrackVisibility(track)} 
-                              className={`p-2 transition-all hover:bg-black/5 rounded-lg ${track.is_public !== false ? 'opacity-40 hover:opacity-100' : 'opacity-100 text-red-500'}`}
-                              title={track.is_public !== false ? "Public: Click to Hide" : "Hidden: Click to Show"}
+                            <button
+                              onClick={() => toggleTrackVisibility(track)}
+                              className={`p-2 transition-all hover:bg-black/5 rounded-lg ${isPublic ? 'opacity-100 text-foreground' : 'opacity-100 text-red-500'}`}
+                              title={isPublic ? "Public: Click to Hide" : "Hidden: Click to Show"}
                             >
-                              {track.is_public !== false ? <Eye size={20} /> : <EyeOff size={20} />}
+                              {isPublic ? <Eye size={20} /> : <EyeOff size={20} />}
                             </button>
 
                             {/* Delete */}
@@ -495,7 +484,7 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
             )}
           </div>
 
-          {/* PRIVACY TOGGLE - Visible if Manager. Placed at bottom of Right Col so it renders last on mobile. */}
+          {/* PRIVACY TOGGLE - Redirects to Profiles Page */}
           {isManager && (
             <div className="pt-8 border-t border-foreground/10">
               <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-foreground/5">
@@ -507,10 +496,10 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
                   </div>
                 </div>
                 <button
-                  onClick={togglePrivacy}
-                  className={`px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-colors ${artist.is_private ? "bg-red-500/20 text-red-500" : "bg-green-500/20 text-green-500"}`}
+                  onClick={() => window.location.href = '/students'}
+                  className="px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-colors bg-white/10 hover:bg-white/20 text-foreground"
                 >
-                  {artist.is_private ? "Unlock" : "Lock"}
+                  Manage
                 </button>
               </div>
             </div>

@@ -19,7 +19,7 @@ export default function Navbar() {
   ];
 
   const moreLinks = [
-    { name: "Profile", href: "/profile" },
+    { name: "Connect", href: "/connect" },
     { name: "Pricing", href: "/pricing" },
     { name: "FAQ", href: "/faq" },
     { name: "Studio Live", href: "https://studiocard.live", external: true },

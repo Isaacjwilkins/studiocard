@@ -11,10 +11,10 @@ export default function PricingPage() {
           Simple Pricing
         </div>
         <h1 className="text-5xl md:text-7xl font-black tracking-tighter">
-          Choose your <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-500">path</span>.
+          Choose your <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-500">plan</span>.
         </h1>
         <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">
-          Whether you're learning your first song or managing a full studio, we have a plan for you.
+          Whether you're teaching for fun or managing a full studio, we have a plan for you.
         </p>
       </div>
 
@@ -47,7 +47,7 @@ export default function PricingPage() {
         </div>
 
         {/* 2. TEACHERS (Standard) - Highlighted */}
-        <div className="relative p-8 rounded-[2.5rem] bg-zinc-900 dark:bg-white text-white dark:text-black shadow-2xl scale-105 z-10 flex flex-col h-full border-4 border-red-500/20">
+        <div className="relative p-8 rounded-[2.5rem] bg-zinc-700 dark:bg-white text-white dark:text-black shadow-2xl scale-105 z-10 flex flex-col h-full border-4 border-red-500/20">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-red-500 to-orange-500 text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">
             Most Popular
           </div>
@@ -74,7 +74,7 @@ export default function PricingPage() {
             ))}
           </ul>
           <a href="/connect" className="w-full py-4 rounded-xl bg-white dark:bg-black text-black dark:text-white font-black text-xs uppercase tracking-[0.2em] hover:scale-105 transition-transform text-center">
-            Start Free Trial
+            Get Started
           </a>
         </div>
 
@@ -97,7 +97,7 @@ export default function PricingPage() {
             </div>
           </div>
           <ul className="space-y-4 mb-8 flex-1 relative z-10">
-            {["4K Video Hosting", "Lossless Audio Quality", "Custom Domain Support", "Advanced Analytics", "0% Commission on Tips"].map((item, i) => (
+            {["Expanded Dashboard", "Lossless Audio Quality", "Custom Domain Support", "Advanced Analytics"].map((item, i) => (
               <li key={i} className="flex items-center gap-3 text-sm font-bold opacity-90">
                 <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
                   <Check size={14} strokeWidth={3} />
@@ -107,7 +107,7 @@ export default function PricingPage() {
             ))}
           </ul>
           <a href="/connect" className="relative z-10 w-full py-4 rounded-xl bg-white/10 border border-white/20 hover:bg-white/20 font-black text-xs uppercase tracking-[0.2em] transition-all text-center">
-            Upgrade to Pro
+            Learn More
           </a>
         </div>
 
@@ -120,7 +120,7 @@ export default function PricingPage() {
           <div className="space-y-4 max-w-lg">
             <h3 className="text-3xl font-bold tracking-tight">Looking for something <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-500">more?</span></h3>
             <p className="text-zinc-600 dark:text-zinc-400 text-lg">
-              Check out <strong className="text-foreground">studio.card <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-green-500">live</span></strong>. Our ecosystem to have your music professionally recorded and produced, for 10% of the cost.
+              Check out <strong className="text-foreground">studio.card <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-green-500">live</span></strong>. Our ecosystem to have your music professionally recorded and produced, for 10% of the cost. Note this is in beta testing and has not been released yet. Contact us for more details or to become a partner!
             </p>
           </div>
 
