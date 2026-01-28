@@ -52,7 +52,7 @@ export default function PricingPage() {
               </li>
             ))}
           </ul>
-          <a href="/profile" className="w-full py-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-foreground font-black text-xs uppercase tracking-[0.2em] hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors text-center">
+          <a href="/students" className="w-full py-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-foreground font-black text-xs uppercase tracking-[0.2em] hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors text-center">
             Create Profile
           </a>
         </div>
@@ -121,7 +121,7 @@ export default function PricingPage() {
             ? "bg-white text-indigo-600 hover:bg-zinc-100 shadow-xl" 
             : "bg-white dark:bg-black text-black dark:text-white hover:scale-105"
           }`}>
-            {isPro ? "Claim Pro Access" : "Get Started"}
+            {isPro ? "Coming Soon" : "Get Started"}
           </a>
         </div>
 
@@ -164,7 +164,7 @@ export default function PricingPage() {
           <div className="space-y-4 max-w-lg">
             <h3 className="text-3xl font-bold tracking-tight">Looking for something <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-500">more?</span></h3>
             <p className="text-zinc-600 dark:text-zinc-400 text-lg">
-              Check out <strong className="text-foreground">studio.card <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-green-500">live</span></strong>. Our ecosystem to have your music professionally recorded and produced. Beta testing is now open for educational partners.
+              Check out <strong className="text-foreground">studio.card <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-green-500">live</span></strong>. Our ecosystem to have your music professionally recorded and produced. Beta testing is now open in select locations.
             </p>
           </div>
           <a 
