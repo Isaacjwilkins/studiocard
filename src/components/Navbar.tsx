@@ -23,7 +23,7 @@ export default function Navbar() {
     { name: "Connect", href: "/connect" },
     { name: "Pricing", href: "/pricing" },
     { name: "FAQ", href: "/faq" },
-    { name: "Studio Live", href: "https://studiocard.live/live", external: true },
+    { name: "studio.card Live", href: "https://studiocard.live/live", external: true },
   ];
 
   const getDesktopLinkClasses = (isActive: boolean) => `

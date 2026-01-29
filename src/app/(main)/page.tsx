@@ -74,8 +74,11 @@ export default function Home() {
     const handleGo = (e: React.FormEvent) => {
       e.preventDefault();
       if (!slug) return;
-      // Uses JS window location to navigate to the external URL
-      window.location.href = `https://studiocard.live/${slug}`;
+
+      // .trim() removes accidental spaces, .toLowerCase() handles the casing
+      const cleanSlug = slug.trim().toLowerCase();
+
+      window.location.href = `https://studiocard.live/${cleanSlug}`;
     };
 
     return (
@@ -93,9 +96,11 @@ export default function Home() {
             <input
               type="text"
               value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              placeholder="enter your slug here"
-              className="w-full bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10 rounded-2xl py-5 pl-6 pr-32 font-bold text-lg text-foreground placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:ring-4 focus:ring-zinc-200 dark:focus:ring-zinc-800 outline-none transition-all shadow-sm"
+              // Force the state to stay lowercase
+              onChange={(e) => setSlug(e.target.value.toLowerCase())}
+              placeholder="enter your slug"
+              // The 'lowercase' class visually forces the text to look lowercase even if caps-lock is on
+              className="w-full lowercase bg-zinc-100/50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl py-4 pl-5 pr-24 font-bold text-sm text-foreground placeholder:normal-case placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:ring-2 focus:ring-red-500/20 outline-none transition-all"
             />
 
             {/* The Button (Absolute positioned inside the input) */}

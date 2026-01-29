@@ -285,7 +285,7 @@ export default function StudioPage() {
                     href="/pricing"
                     className="group inline-flex items-center gap-3 px-10 py-5 bg-foreground text-background rounded-full font-bold text-xs uppercase tracking-[0.2em] hover:opacity-90 transition-all shadow-xl hover:scale-105"
                 >
-                    Book Your Session <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                    Book Your Session. <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                 </Link>
             </section>
 

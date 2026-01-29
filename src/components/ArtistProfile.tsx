@@ -593,3 +593,4 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
     </div>
   );
 }
+
