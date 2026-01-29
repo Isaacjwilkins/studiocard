@@ -159,7 +159,7 @@ export default function Home() {
 
 
   return (
-    <main className="relative flex flex-col items-center overflow-x-hidden pt-32 pb-20">
+    <main className="relative flex flex-col items-center overflow-x-hidden pt-26 pb-20">
 
       {/* SHIMMER ANIMATION STYLE (Global for this page) */}
       <style jsx>{`
@@ -174,11 +174,13 @@ export default function Home() {
 
       {/* 1. NARRATIVE HERO */}
       <section className="relative w-full max-w-5xl px-6 mb-32 flex flex-col items-center text-center z-10 mx-auto">
-        <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-zinc-500 dark:text-zinc-400 mb-6">
+        {/* Header always first */}
+        <h2 className="order-1 text-xs font-bold uppercase tracking-[0.4em] text-zinc-500 dark:text-zinc-400 mb-6">
           Make Your Practice Official
         </h2>
 
-        <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-foreground mb-8 leading-[0.9]">
+        {/* Title always second */}
+        <h1 className="order-2 text-6xl md:text-8xl font-black tracking-tighter text-foreground mb-8 leading-[0.9]">
           Turn your{" "}
           <span className="text-red-500/80 dark:text-red-400">practice</span>{" "}
           room into a{" "}
@@ -186,22 +188,24 @@ export default function Home() {
           <br />
         </h1>
 
-        <p className="text-xl md:text-2xl text-zinc-600 dark:text-zinc-400 font-light max-w-2xl mx-auto leading-relaxed mb-10">
+        {/* PARAGRAPH: Hidden on mobile, shown on medium screens and up */}
+        <p className="hidden md:block order-3 text-xl md:text-2xl text-zinc-600 dark:text-zinc-400 font-light max-w-2xl mx-auto leading-relaxed mb-10">
           Bridge the gap between lessons. Send your recordings to your teacher, get feedback, and share your wins with the people who care.
         </p>
 
-        <div className="flex flex-wrap justify-center gap-4 -mb-4"> {/* Added mb-16 here */}
+        {/* SLUG NAVIGATOR: Order 3 on mobile (takes the paragraph's spot), Order 5 on desktop */}
+        <div className="order-3 md:order-5 w-full max-w-lg animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
+          <SlugNavigator />
+        </div>
+
+        {/* BUTTONS: Order 4 on both */}
+        <div className="order-4 flex flex-wrap justify-center gap-4 mt-8 md:mt-0 mb-8 md:mb-16">
           <Link href="/students" className="group flex items-center gap-3 px-8 py-4 bg-foreground text-background rounded-full font-bold text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-xl">
             I'm a Student <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
           </Link>
           <Link href="/teachers" className="group flex items-center gap-3 px-8 py-4 border border-zinc-300 dark:border-zinc-700 rounded-full font-bold text-xs uppercase tracking-widest hover:bg-zinc-100 dark:hover:bg-white/10 transition-all">
             For Teachers
           </Link>
-        </div>
-
-        {/* REFINED SLUG NAVIGATOR: Removed top border/mt-24 to close the gap */}
-        <div className="w-full max-w-lg animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
-          <SlugNavigator />
         </div>
       </section>
 
