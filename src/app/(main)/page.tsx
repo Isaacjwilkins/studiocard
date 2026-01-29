@@ -68,6 +68,58 @@ export default function Home() {
 
 
 
+  function SlugNavigator() {
+    const [slug, setSlug] = useState('');
+
+    const handleGo = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!slug) return;
+      // Uses JS window location to navigate to the external URL
+      window.location.href = `https://studiocard.live/${slug}`;
+    };
+
+    return (
+      <div className="w-full max-w-md mx-auto text-center space-y-8 py-12">
+        <div className="space-y-2">
+
+          <p className="text-zinc-500 dark:text-zinc-400 text-sm">
+            Already have an account? Jump straight to your card.
+          </p>
+        </div>
+
+        <form onSubmit={handleGo} className="relative group">
+          <div className="relative flex items-center">
+            {/* The Input */}
+            <input
+              type="text"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              placeholder="enter your slug here"
+              className="w-full bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10 rounded-2xl py-5 pl-6 pr-32 font-bold text-lg text-foreground placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:ring-4 focus:ring-zinc-200 dark:focus:ring-zinc-800 outline-none transition-all shadow-sm"
+            />
+
+            {/* The Button (Absolute positioned inside the input) */}
+            <button
+              type="submit"
+              disabled={!slug}
+              className="absolute right-2 top-2 bottom-2 bg-foreground text-background hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-30 disabled:cursor-not-allowed px-6 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] transition-all flex items-center gap-2"
+            >
+              Go <ArrowRight size={12} />
+            </button>
+          </div>
+
+          {/* Helper Text */}
+          <div className="mt-4 flex justify-center gap-2 text-xs font-medium text-zinc-400">
+            <span>try:</span>
+            <span className="bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded text-foreground font-mono">
+              studiocard.live/{slug || 'your-slug'}
+            </span>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
   //useEffect(() => {
   //const initYT = () => {
   //if (!iframeRef.current || !window.YT) return;
@@ -116,7 +168,7 @@ export default function Home() {
       `}</style>
 
       {/* 1. NARRATIVE HERO */}
-      <section className="relative w-full max-w-5xl px-6 mb-32 flex flex-col items-center text-center z-10">
+      <section className="relative w-full max-w-5xl px-6 mb-32 flex flex-col items-center text-center z-10 mx-auto">
         <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-zinc-500 dark:text-zinc-400 mb-6">
           Make Your Practice Official
         </h2>
@@ -129,12 +181,11 @@ export default function Home() {
           <br />
         </h1>
 
-
-
         <p className="text-xl md:text-2xl text-zinc-600 dark:text-zinc-400 font-light max-w-2xl mx-auto leading-relaxed mb-10">
           Bridge the gap between lessons. Send your recordings to your teacher, get feedback, and share your wins with the people who care.
         </p>
-        <div className="flex flex-wrap justify-center gap-4">
+
+        <div className="flex flex-wrap justify-center gap-4 -mb-4"> {/* Added mb-16 here */}
           <Link href="/students" className="group flex items-center gap-3 px-8 py-4 bg-foreground text-background rounded-full font-bold text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-xl">
             I'm a Student <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
           </Link>
@@ -142,7 +193,14 @@ export default function Home() {
             For Teachers
           </Link>
         </div>
+
+        {/* REFINED SLUG NAVIGATOR: Removed top border/mt-24 to close the gap */}
+        <div className="w-full max-w-lg animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
+          <SlugNavigator />
+        </div>
       </section>
+
+
 
       {/* 2. THE JOURNEY (Visual Timeline) */}
       <div className="w-full max-w-5xl px-6 md:px-12 py-16 md:py-8 rounded-[3rem] border-y border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-white/5 backdrop-blur-sm shadow-2xl relative mb-24">
