@@ -1,6 +1,8 @@
 "use client";
 import { useState } from 'react';
 import { Check, Zap, ArrowRight, ExternalLink, School, MessageSquare } from 'lucide-react';
+import Link from "next/link"; // make sure this is at the top of your file
+
 
 // Helper for rgba colors if needed, otherwise use hex/tailwind
 const hexToRgba = (hex: string, alpha: number) => {
@@ -12,10 +14,12 @@ const hexToRgba = (hex: string, alpha: number) => {
 
 export default function PricingPage() {
   const [isPro, setIsPro] = useState(false);
+  const [isStudentPro, setIsStudentPro] = useState(false);
+
 
   return (
     <main className="min-h-screen pt-32 pb-20 px-6">
-      
+
       {/* HEADER */}
       <div className="text-center space-y-6 mb-20">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-xs font-bold uppercase tracking-widest text-zinc-500">
@@ -31,39 +35,111 @@ export default function PricingPage() {
 
       {/* PRICING CARDS */}
       <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-8 mb-24 items-stretch">
-        
-        {/* 1. STUDENTS (Free) */}
-        <div className="relative p-8 rounded-[2.5rem] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 shadow-xl flex flex-col h-full">
+
+        {/* 1. STUDENTS (Dynamic Standard / Pro) */}
+        <div
+          className={`relative p-8 rounded-[2.5rem] transition-all duration-500 flex flex-col h-full border-4 ${isStudentPro
+            ? "bg-black dark:bg-white text-white dark:text-black border-transparent shadow-2xl scale-[1.03]"
+            : "bg-white dark:bg-zinc-900 text-foreground border-zinc-200 dark:border-white/10 shadow-xl"
+            }`}
+        >
+          {/* GRADIENT GLOW (PRO ONLY) */}
+          {isStudentPro && (
+            <div className="absolute inset-0 rounded-[2.5rem] bg-gradient-to-br from-indigo-500 via-purple-500 to-amber-500 -z-10 blur-xl opacity-50" />
+          )}
+
+          {/* PRO TOGGLE */}
+          <button
+            onClick={() => setIsStudentPro(!isStudentPro)}
+            className={`absolute top-6 right-6 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest overflow-hidden transition-all active:scale-95 ${isStudentPro
+              ? "bg-amber-500 text-black"
+              : "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black shadow-[0_0_15px_rgba(0,0,0,0.25)]"
+              }`}
+          >
+            <span className="relative z-10 flex items-center gap-1.5">
+              <Zap size={10} fill="currentColor" />
+              {isStudentPro ? "Standard" : "Go Pro"}
+            </span>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-shimmer-fast animation-delay-700 pointer-events-none" />
+          </button>
+
+          {/* HEADER */}
           <div className="mb-6">
-            <h3 className="text-2xl font-black text-foreground mb-2">Students</h3>
-            <p className="text-sm text-zinc-500 font-medium mb-4">For the rising stars.</p>
+            <h3 className="text-2xl font-black mb-2">
+              {isStudentPro ? "Pro Student" : "Students"}
+            </h3>
+            <p className="text-sm opacity-70 font-medium mb-4">
+              {isStudentPro ? "For serious practice." : "For rising stars."}
+            </p>
+
             <div className="flex items-baseline gap-2">
-              <span className="text-5xl font-black text-foreground">$0</span>
-              <span className="text-sm text-zinc-400 font-bold uppercase tracking-widest">/ Forever</span>
+              {isStudentPro && (
+                <span className="text-2xl font-bold line-through opacity-40">$20</span>
+              )}
+              <span className="text-5xl font-black">
+                {isStudentPro ? "$10" : "$0"}
+              </span>
+              <span className="text-sm opacity-60 font-bold uppercase tracking-widest">
+                {isStudentPro ? "/ Month" : "/ Forever"}
+              </span>
             </div>
           </div>
+
+          {/* FEATURES */}
           <ul className="space-y-4 mb-8 flex-1">
-            {["Custom Artist Profile", "Shareable Link", "Unlimited Plays", "Mobile Optimized"].map((item, i) => (
-              <li key={i} className="flex items-center gap-3 text-sm font-bold text-zinc-700 dark:text-zinc-300">
-                <div className="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-foreground">
+            {(isStudentPro
+              ? [
+                "Everything in Basic",
+                "Unlock Pro Lessons",
+                "Advanced Techniques",
+                "Unlimited Lesson History",
+                "Priority Feature Access",
+              ]
+              : [
+                "Custom Artist Profile",
+                "Shareable Link",
+                "Unlimited Plays",
+                "Mobile Optimized",
+                "Access to Learning Cards",
+              ]
+            ).map((item, i) => (
+              <li
+                key={i}
+                className="flex items-center gap-3 text-sm font-bold animate-in fade-in slide-in-from-left-2 duration-300"
+              >
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center ${isStudentPro
+                    ? "bg-amber-500 text-black"
+                    : "bg-zinc-100 dark:bg-zinc-800"
+                    }`}
+                >
                   <Check size={14} strokeWidth={3} />
                 </div>
                 {item}
               </li>
             ))}
           </ul>
-          <a href="/students" className="w-full py-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-foreground font-black text-xs uppercase tracking-[0.2em] hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors text-center">
-            Create Profile
-          </a>
+
+          {/* CTA */}
+          <Link
+            href={isStudentPro ? "/connect" : "/students"}
+            className={`w-full py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all text-center ${isStudentPro
+                ? "bg-amber-500 text-black hover:brightness-110 hover:scale-[1.02] shadow-lg shadow-amber-500/25 inline-flex justify-center"
+                : "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 inline-flex justify-center"
+              }`}
+          >
+            {isStudentPro ? "Upgrade to Pro" : "Create Profile"}
+          </Link>
+
         </div>
 
+
         {/* 2. TEACHERS (Dynamic Standard/Pro) */}
-        <div className={`relative p-8 rounded-[2.5rem] transition-all duration-500 flex flex-col h-full border-4 ${
-          isPro 
-          ? "bg-gradient-to-br from-indigo-600 to-violet-700 text-white border-white/20 shadow-[0_0_40px_rgba(99,102,241,0.4)]" 
+        <div className={`relative p-8 rounded-[2.5rem] transition-all duration-500 flex flex-col h-full border-4 ${isPro
+          ? "bg-gradient-to-br from-indigo-600 to-violet-700 text-white border-white/20 shadow-[0_0_40px_rgba(99,102,241,0.4)]"
           : "bg-zinc-700 dark:bg-white text-white dark:text-black border-red-500/20 shadow-2xl"
-        }`}>
-          
+          }`}>
+
           {/* Most Popular Tag */}
           {!isPro && (
             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-red-500 to-orange-500 text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">
@@ -72,19 +148,18 @@ export default function PricingPage() {
           )}
 
           {/* THE PRO TOGGLE BUTTON (Shimmering) */}
-          <button 
+          <button
             onClick={() => setIsPro(!isPro)}
-            className={`absolute top-6 right-6 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest overflow-hidden transition-all active:scale-95 ${
-              isPro 
-              ? "bg-white text-indigo-600" 
+            className={`absolute top-6 right-6 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest overflow-hidden transition-all active:scale-95 ${isPro
+              ? "bg-white text-indigo-600"
               : "bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]"
-            }`}
+              }`}
           >
             <span className="relative z-10 flex items-center gap-1.5">
               <Zap size={10} fill="currentColor" /> {isPro ? "Standard" : "Go Pro"}
             </span>
             {/* Shimmer Effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-shimmer-fast pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-shimmer-fast animation-delay-500 pointer-events-none" />
           </button>
 
           <div className="mb-6">
@@ -103,7 +178,7 @@ export default function PricingPage() {
           </div>
 
           <ul className="space-y-4 mb-8 flex-1">
-            {(isPro 
+            {(isPro
               ? ["Expanded Dashboard", "Lossless Audio Quality", "Custom Domain Support", "Advanced Analytics", "Priority 24/7 Support"]
               : ["Teacher Dashboard", "Track Student Practice", "Private Feedback Notes", "Early Access to Features"]
             ).map((item, i) => (
@@ -116,11 +191,10 @@ export default function PricingPage() {
             ))}
           </ul>
 
-          <a href="/connect" className={`w-full py-4 rounded-xl font-black text-xs uppercase tracking-[0.2em] transition-all text-center ${
-            isPro 
-            ? "bg-white text-indigo-600 hover:bg-zinc-100 shadow-xl" 
+          <a href="/connect" className={`w-full py-4 rounded-xl font-black text-xs uppercase tracking-[0.2em] transition-all text-center ${isPro
+            ? "bg-white text-indigo-600 hover:bg-zinc-100 shadow-xl"
             : "bg-white dark:bg-black text-black dark:text-white hover:scale-105"
-          }`}>
+            }`}>
             {isPro ? "Coming Soon" : "Get Started"}
           </a>
         </div>
@@ -128,7 +202,7 @@ export default function PricingPage() {
         {/* 3. INSTITUTIONAL (New Partnership Plan) */}
         <div className="relative p-8 rounded-[2.5rem] bg-zinc-50 dark:bg-zinc-800/50 border-2 border-dashed border-zinc-200 dark:border-white/10 flex flex-col h-full group hover:border-blue-500/50 transition-colors">
           <div className="mb-6">
-          
+
             <h3 className="text-2xl font-black text-foreground mb-2">Institutional</h3>
             <p className="text-sm text-zinc-500 font-medium mb-4">For schools & districts.</p>
             <div className="flex items-baseline gap-2">
@@ -167,9 +241,9 @@ export default function PricingPage() {
               Check out <strong className="text-foreground">studio.card <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-green-500">live</span></strong>. Our ecosystem to have your music professionally recorded and produced. Beta testing is now open in select locations.
             </p>
           </div>
-          <a 
-            href="https://studiocard.live" 
-            target="_blank" 
+          <a
+            href="https://studiocard.live"
+            target="_blank"
             rel="noopener noreferrer"
             className="group shrink-0 inline-flex items-center gap-3 px-8 py-4 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-full font-bold text-xs uppercase tracking-widest hover:scale-105 transition-transform"
           >
