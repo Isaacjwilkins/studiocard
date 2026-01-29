@@ -13,17 +13,17 @@ export default function Navbar() {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const { theme, setTheme } = useTheme();
 
+  // Updated Main Links (Visible on Desktop)
   const mainLinks = [
-    { name: "Students", href: "/students" },
-    { name: "Teachers", href: "/teachers" },
+    { name: "Locations", href: "/live/locations" },
+    { name: "Pricing", href: "/live/pricing" },
   ];
 
+  // Updated Hamburger/More Links
   const moreLinks = [
-    { name: "Learn", href: "/learn" }, // Added to the "More" dropdown
-    { name: "Connect", href: "/connect" },
-    { name: "Pricing", href: "/pricing" },
-    { name: "FAQ", href: "/faq" },
-    { name: "Studio Live", href: "https://studiocard.live/live", external: true },
+    { name: "Studio", href: "/live/studio" },
+    { name: "Connect", href: "/live/connect" },
+    { name: "studio.card", href: "https://studiocard.live", external: true }, // Kept Learn here as it fits the "App" side
   ];
 
   const getDesktopLinkClasses = (isActive: boolean) => `
@@ -36,20 +36,29 @@ export default function Navbar() {
       <div className="w-full border-b border-white/10 dark:border-white/5 bg-white/60 dark:bg-black/80 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
 
-          {/* LOGO - Hard Reset to Home */}
-          <a href="/" className="hover:opacity-70 transition-opacity">
+          {/* LOGO with SHIMMERING LIVE */}
+          <a href="/" className="group hover:opacity-80 transition-opacity flex items-center gap-3">
             <h1 className="text-xl md:text-2xl font-black tracking-tighter text-foreground">
-              studio<span className="text-red-500/80 dark:text-red-400">.</span>card
+              studio<span className="text-emerald-500/80 dark:text-emerald-400">.</span>card
             </h1>
+            
+            {/* Shimmering LIVE Badge */}
+            <div className="relative overflow-hidden px-2 py-0.5 rounded bg-green-500/10 border border-green-500/20">
+              <span className="relative z-10 text-[8px] font-black tracking-widest text-green-500 flex items-center gap-1">
+                <span className="w-1 h-1 rounded-full bg-green-500 animate-pulse" /> LIVE
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-500/10 to-transparent -translate-x-full animate-shimmer" />
+            </div>
           </a>
 
           <div className="hidden md:flex items-center gap-8">
             
-            {/* HOME LINK - Changed from Link to <a> for Hard Reset */}
-            <a href="/" className={getDesktopLinkClasses(pathname === "/")}>
+            {/* HOME LINK */}
+            <a href="/live" className={getDesktopLinkClasses(pathname === "/")}>
               Home
             </a>
 
+            {/* MAIN LINKS (Locations, Pricing) */}
             {mainLinks.map((link) => {
               const isActive = pathname === link.href;
               return (
@@ -62,13 +71,17 @@ export default function Navbar() {
               );
             })}
 
+            {/* MORE DROPDOWN (Studio, Music, Connect) */}
             <div
               className="relative"
               onMouseEnter={() => setIsMoreOpen(true)}
               onMouseLeave={() => setIsMoreOpen(false)}
             >
-              {/* Added pathname.startsWith('/learn') to active state check */}
-              <button className={`${getDesktopLinkClasses(pathname.startsWith('/profile') || pathname.startsWith('/pricing') || pathname.startsWith('/faq') || pathname.startsWith('/learn'))} flex items-center gap-1`}>
+              <button 
+                className={`${getDesktopLinkClasses(
+                  moreLinks.some(link => pathname.startsWith(link.href))
+                )} flex items-center gap-1`}
+              >
                 More <ChevronDown size={10} className={`transition-transform ${isMoreOpen ? 'rotate-180' : ''}`} />
               </button>
 
@@ -142,11 +155,12 @@ export default function Navbar() {
             <div className="flex flex-col h-full pt-24 px-8 overflow-y-auto pb-10">
               <div className="flex flex-col gap-6">
                 
-                {/* MOBILE HOME LINK - Hard Reset */}
+                {/* MOBILE HOME */}
                 <a href="/" onClick={() => setIsOpen(false)} className={`text-4xl font-black tracking-tighter ${pathname === "/" ? "text-foreground" : "text-zinc-400"}`}>
                   Home
                 </a>
 
+                {/* MOBILE MAIN LINKS */}
                 {mainLinks.map((link) => (
                   <Link key={link.href} href={link.href} onClick={() => setIsOpen(false)} className={`text-4xl font-black tracking-tighter ${pathname === link.href ? "text-foreground" : "text-zinc-400"}`}>
                     {link.name}
@@ -155,22 +169,27 @@ export default function Navbar() {
 
                 <div className="h-px w-20 bg-zinc-200 dark:bg-zinc-800 my-2" />
 
+                {/* MOBILE MORE LINKS */}
                 {moreLinks.map((link) => (
-                  link.external ? (
-                    <a key={link.href} href={link.href} target="_blank" className="text-2xl font-bold tracking-tight text-zinc-500 flex items-center gap-2">
-                      {link.name} <ExternalLink size={16} />
-                    </a>
-                  ) : (
-                    <Link key={link.href} href={link.href} onClick={() => setIsOpen(false)} className={`text-2xl font-bold tracking-tight ${pathname === link.href ? "text-foreground" : "text-zinc-500"}`}>
-                      {link.name}
-                    </Link>
-                  )
+                  <Link key={link.href} href={link.href} onClick={() => setIsOpen(false)} className={`text-2xl font-bold tracking-tight ${pathname === link.href ? "text-foreground" : "text-zinc-500"}`}>
+                    {link.name}
+                  </Link>
                 ))}
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Shimmer Animation Style */}
+      <style jsx global>{`
+        @keyframes shimmer {
+          100% { transform: translateX(100%); }
+        }
+        .animate-shimmer {
+          animation: shimmer 2s infinite;
+        }
+      `}</style>
     </nav>
   );
 }

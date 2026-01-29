@@ -11,7 +11,7 @@ export default function TeachersPage() {
       {/* 1. HERO: Professional & Clear */}
       <section className="max-w-4xl mx-auto text-center mb-24">
         <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-zinc-500 dark:text-zinc-400 mb-6">
-          For Studio Owners
+          For Teachers
         </h2>
         <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-foreground mb-8">
           The Modern Way to <br /> Track Progress.

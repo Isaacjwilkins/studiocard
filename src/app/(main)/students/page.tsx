@@ -305,13 +305,14 @@ export default function StudentsPage() {
         {/* NEW: GO BUTTON (High Visibility Version) */}
         <button
           onClick={scrollToForm}
-          className="group relative inline-flex items-center gap-3 px-10 py-5 rounded-full shadow-xl shadow-purple-500/30 hover:scale-105 hover:shadow-purple-500/50 transition-all duration-300 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500"
+          className="group relative inline-flex items-center gap-2 px-8 py-3.5 rounded-full shadow-xl shadow-purple-500/30 hover:scale-105 hover:shadow-purple-500/50 transition-all duration-300 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500"
         >
-          <span className="text-2xl font-black uppercase tracking-widest text-white">
+          <span className="text-xl font-black uppercase tracking-widest text-white">
             GO
           </span>
-          <ArrowDown className="text-white group-hover:translate-y-1 transition-transform" strokeWidth={3} size={24} />
+          <ArrowDown className="text-white group-hover:translate-y-1 transition-transform" strokeWidth={3} size={20} />
         </button>
+
       </section>
 
       {/* FEATURES GRID */}
@@ -521,7 +522,7 @@ export default function StudentsPage() {
                     disabled={loading}
                     className="w-full py-5 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-black text-sm uppercase tracking-[0.2em] shadow-xl hover:scale-[1.01] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                   >
-                    {loading ? <Loader2 className="animate-spin" /> : (mode === 'signup' ? "Create Account" : "Save Changes")}
+                    {loading ? <Loader2 className="animate-spin" /> : (mode === 'signup' ? "Create Card" : "Save Changes")}
                   </button>
 
                 </form>

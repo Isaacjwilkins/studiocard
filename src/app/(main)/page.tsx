@@ -67,39 +67,39 @@ export default function Home() {
   };
 
 
-  
+
   //useEffect(() => {
-    //const initYT = () => {
-      //if (!iframeRef.current || !window.YT) return;
-      //playerRef.current = new window.YT.Player(iframeRef.current, {
-        //events: {
-          //onReady: (e: any) => {
-            //e.target.mute();
-          //}
-        //}
-      //});
-    //};
+  //const initYT = () => {
+  //if (!iframeRef.current || !window.YT) return;
+  //playerRef.current = new window.YT.Player(iframeRef.current, {
+  //events: {
+  //onReady: (e: any) => {
+  //e.target.mute();
+  //}
+  //}
+  //});
+  //};
 
-    
-    //if (!window.YT) {
+
+  //if (!window.YT) {
   //    const tag = document.createElement('script');
-//      tag.src = "https://www.youtube.com/iframe_api";
+  //      tag.src = "https://www.youtube.com/iframe_api";
   //    const firstScriptTag = document.getElementsByTagName('script')[0];
-    //  firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-      //window.onYouTubeIframeAPIReady = initYT;
+  //  firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+  //window.onYouTubeIframeAPIReady = initYT;
   //  } else {
-    //  initYT();
-   // }
+  //  initYT();
+  // }
 
- //   return () => {
-   //   if (playerRef.current && playerRef.current.destroy) {
-     //   playerRef.current.destroy();
-//      }
- //   };
- // }, []);
+  //   return () => {
+  //   if (playerRef.current && playerRef.current.destroy) {
+  //   playerRef.current.destroy();
+  //      }
+  //   };
+  // }, []);
 
 
-  
+
 
   return (
     <main className="relative flex flex-col items-center overflow-x-hidden pt-32 pb-20">
@@ -125,9 +125,10 @@ export default function Home() {
           Turn your{" "}
           <span className="text-red-500/80 dark:text-red-400">practice</span>{" "}
           room into a{" "}
-          <span className="text-red-500/80 dark:text-red-400">stage</span>.
+          <span className="text-foreground md:text-red-500/80 dark:md:text-red-400">stage</span>.
           <br />
         </h1>
+
 
 
         <p className="text-xl md:text-2xl text-zinc-600 dark:text-zinc-400 font-light max-w-2xl mx-auto leading-relaxed mb-10">
@@ -262,7 +263,7 @@ export default function Home() {
               Your recording instantly publishes to your personal <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-red-400">studio.card</span>.
             </p>
             <p className="text-sm text-zinc-500 mb-2">
-              Share your link with family and friends to show off your hard work. And if you don't love it, keep it private and to yourself. Your teacher gets everything automatically. 
+              Share your link with family and friends to show off your hard work. And if you don't love it, keep it private and to yourself. Your teacher gets everything automatically.
             </p>
           </div>
 
@@ -363,11 +364,11 @@ export default function Home() {
                 fill
                 className="object-cover object-top hidden dark:block"
               />
-            {/* ✨✨ NEW: PREMIUM SHIMMER OVERLAY ✨✨ */}
-            <div className="absolute inset-0 z-20 pointer-events-none">
+              {/* ✨✨ NEW: PREMIUM SHIMMER OVERLAY ✨✨ */}
+              <div className="absolute inset-0 z-20 pointer-events-none">
                 <div className="absolute inset-0 w-full h-full bg-gradient-to-tr from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer" />
               </div>
-              
+
               {/* Optional: Subtle static gloss reflection for extra glass feel */}
               <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-b from-white/5 to-transparent opacity-50" />
             </div>
@@ -623,9 +624,9 @@ function PracticeCardComponent({ artist }: { artist: any }) {
   return (
     <div className="relative w-full h-full rounded-2xl border border-zinc-200 dark:border-white/10 shadow-2xl overflow-hidden bg-white dark:bg-black flex flex-col text-left">
       {/* Dynamic Color Tint */}
-      <div 
-        className="absolute inset-0 pointer-events-none opacity-[0.05] dark:opacity-[0.15]" 
-        style={{ backgroundColor: artist.color }} 
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.05] dark:opacity-[0.15]"
+        style={{ backgroundColor: artist.color }}
       />
 
       {/* Browser Header (Traffic Lights) */}
@@ -643,16 +644,16 @@ function PracticeCardComponent({ artist }: { artist: any }) {
       {/* Body - Image Container */}
       <div className="relative w-full flex-1 bg-zinc-50 dark:bg-zinc-900 overflow-hidden group">
         {/* Light Mode Image */}
-        <img 
+        <img
           src="IMG_1996 3.jpg"
-          alt="Practice Session Light" 
+          alt="Practice Session Light"
           className="w-full h-full object-cover block dark:hidden"
         />
-        
+
         {/* Dark Mode Image */}
-        <img 
-          src={"IMG_1997 3.jpg"} 
-          alt="Practice Session Dark" 
+        <img
+          src={"IMG_1997 3.jpg"}
+          alt="Practice Session Dark"
           className="w-full h-full object-cover hidden dark:block"
         />
       </div>

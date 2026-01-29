@@ -203,7 +203,9 @@ export default function PricingPage() {
                             </div>
                             <div>
                                 <h4 className="font-bold text-lg">Studio Pro</h4>
-                                <p className="text-xs font-bold uppercase tracking-wider opacity-60">$10 / Month</p>
+                                <p className="text-xs font-bold uppercase tracking-wider opacity-60">
+                                    <span className="line-through">$10 / Month</span> Free for New Users Now
+                                </p>
                             </div>
                         </div>
                         <ul className="space-y-4 mb-8">

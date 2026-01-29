@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 const faqs = [
   {
     question: "What exactly is a Studio Card?",
-    answer: "Think of it as your digital music portfolio. It's a dedicated webpage (studiocard.com/your-name) where you can showcase your bio, your profile picture, and most importantly, your practice history. It makes your hard work visible to your teacher and family."
+    answer: "Think of it as your digital music portfolio. It's a dedicated webpage (studiocard.live/your-name) where you can showcase your bio, your profile picture, and most importantly, your practice history. It makes your hard work visible to your teacher and family."
   },
   {
     question: "Is it really free for students?",
@@ -20,11 +20,11 @@ const faqs = [
   },
   {
     question: "Who can see my profile?",
-    answer: "That is up to you! You can set your profile to 'Public' (anyone with the link can see) or 'Private'. Private profiles require a simple passcode to view, so you can safely share it with only Grandma and your Teacher."
+    answer: "That is up to you! You can set your profile to 'Public' (anyone with the link can see) or 'Private'. Private profiles require a simple passcode to view, so you can safely share it with only Grandma if you prefer. Your teacher has access to all of your recordings so they can be in the loop."
   },
   {
     question: "I'm a teacher. How do I see my students' work?",
-    answer: "When you sign up for a Teacher Account, you get a Dashboard. You can invite your students to join your 'Studio', and whenever they upload a new practice session, it automatically appears in your feed for review."
+    answer: "When you sign up for a Teacher Account, you get a Dashboard. We will help you set this up; if you've lost access reach out to our support and we will get it back up and running asap. You can invite your students to join your 'Studio', and whenever they upload a new practice session, it automatically appears in your feed for review. Then you can leave your comments right there!"
   },
   {
     question: "What is the difference between Studio Card and Studio Live?",
