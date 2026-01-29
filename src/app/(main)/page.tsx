@@ -201,7 +201,7 @@ export default function Home() {
         {/* BUTTONS: Order 4 on both */}
         <div className="order-4 flex flex-wrap justify-center gap-4 mt-8 md:mt-0 mb-8 md:mb-16">
           <Link href="/students" className="group flex items-center gap-3 px-8 py-4 bg-foreground text-background rounded-full font-bold text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-xl">
-            I'm a Student <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+            Sign Up <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
           </Link>
           <Link href="/teachers" className="group flex items-center gap-3 px-8 py-4 border border-zinc-300 dark:border-zinc-700 rounded-full font-bold text-xs uppercase tracking-widest hover:bg-zinc-100 dark:hover:bg-white/10 transition-all">
             For Teachers
