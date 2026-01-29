@@ -39,8 +39,8 @@ export default function PricingPage() {
         {/* 1. STUDENTS (Dynamic Standard / Pro) */}
         <div
           className={`relative p-8 rounded-[2.5rem] transition-all duration-500 flex flex-col h-full border-4 ${isStudentPro
-            ? "bg-black dark:bg-white text-white dark:text-black border-transparent shadow-2xl scale-[1.03]"
-            : "bg-white dark:bg-zinc-900 text-foreground border-zinc-200 dark:border-white/10 shadow-xl"
+              ? "bg-black dark:bg-white text-white dark:text-black border-transparent shadow-2xl scale-[1.03]"
+              : "bg-white dark:bg-zinc-900 text-foreground border-zinc-200 dark:border-white/10 shadow-xl"
             }`}
         >
           {/* GRADIENT GLOW (PRO ONLY) */}
@@ -52,8 +52,8 @@ export default function PricingPage() {
           <button
             onClick={() => setIsStudentPro(!isStudentPro)}
             className={`absolute top-6 right-6 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest overflow-hidden transition-all active:scale-95 ${isStudentPro
-              ? "bg-amber-500 text-black"
-              : "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black shadow-[0_0_15px_rgba(0,0,0,0.25)]"
+                ? "bg-amber-500 text-black"
+                : "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black shadow-[0_0_15px_rgba(0,0,0,0.25)]"
               }`}
           >
             <span className="relative z-10 flex items-center gap-1.5">
@@ -72,16 +72,24 @@ export default function PricingPage() {
               {isStudentPro ? "For serious practice." : "For rising stars."}
             </p>
 
-            <div className="flex items-baseline gap-2">
-              {isStudentPro && (
-                <span className="text-2xl font-bold line-through opacity-40">$20</span>
-              )}
-              <span className="text-5xl font-black">
-                {isStudentPro ? "$10" : "$0"}
-              </span>
-              <span className="text-sm opacity-60 font-bold uppercase tracking-widest">
-                {isStudentPro ? "/ Month" : "/ Forever"}
-              </span>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-baseline gap-2">
+                {isStudentPro && (
+                  <span className="text-2xl font-bold line-through opacity-40">$20</span>
+                )}
+                <span className="text-5xl font-black">{isStudentPro ? "$10" : "$0"}</span>
+                <span className="text-sm opacity-60 font-bold uppercase tracking-widest">
+                  {isStudentPro ? "/ Month" : "/ Forever"}
+                </span>
+              </div>
+              <p
+                className={`text-xs font-bold uppercase tracking-wider ${isStudentPro
+                    ? "opacity-40 text-white/70 dark:text-black/50"
+                    : "text-red-400 dark:text-red-600"
+                  }`}
+              >
+                + $5 / student
+              </p>
             </div>
           </div>
 
@@ -108,9 +116,7 @@ export default function PricingPage() {
                 className="flex items-center gap-3 text-sm font-bold animate-in fade-in slide-in-from-left-2 duration-300"
               >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center ${isStudentPro
-                    ? "bg-amber-500 text-black"
-                    : "bg-zinc-100 dark:bg-zinc-800"
+                  className={`w-6 h-6 rounded-full flex items-center justify-center ${isStudentPro ? "bg-amber-500 text-black" : "bg-zinc-100 dark:bg-zinc-800"
                     }`}
                 >
                   <Check size={14} strokeWidth={3} />
@@ -122,7 +128,7 @@ export default function PricingPage() {
 
           {/* CTA */}
           <Link
-            href={isStudentPro ? "/connect" : "/students"}
+            href={isStudentPro ? "/connect" : "/students#profile-editor"}
             className={`w-full py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all text-center ${isStudentPro
                 ? "bg-amber-500 text-black hover:brightness-110 hover:scale-[1.02] shadow-lg shadow-amber-500/25 inline-flex justify-center"
                 : "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 inline-flex justify-center"
@@ -130,60 +136,94 @@ export default function PricingPage() {
           >
             {isStudentPro ? "Upgrade to Pro" : "Create Profile"}
           </Link>
-
         </div>
 
 
-        {/* 2. TEACHERS (Dynamic Standard/Pro) */}
-        <div className={`relative p-8 rounded-[2.5rem] transition-all duration-500 flex flex-col h-full border-4 ${isPro
-          ? "bg-gradient-to-br from-indigo-600 to-violet-700 text-white border-white/20 shadow-[0_0_40px_rgba(99,102,241,0.4)]"
-          : "bg-zinc-700 dark:bg-white text-white dark:text-black border-red-500/20 shadow-2xl"
-          }`}>
-
-          {/* Most Popular Tag */}
-          {!isPro && (
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-red-500 to-orange-500 text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">
-              Most Popular
-            </div>
+        {/* 2. TEACHERS (Dynamic Standard / Pro) */}
+        <div
+          className={`relative p-8 rounded-[2.5rem] transition-all duration-500 flex flex-col h-full border-4 ${isPro
+            ? "bg-indigo-900 text-white border-transparent shadow-2xl scale-[1.03]"
+            : "bg-white dark:bg-zinc-900 text-foreground border-zinc-200 dark:border-white/10 shadow-xl"
+            }`}
+        >
+          {/* GRADIENT GLOW (PRO ONLY) */}
+          {isPro && (
+            <div className="absolute inset-0 rounded-[2.5rem] bg-gradient-to-br from-sky-500 via-cyan-400 to-violet-600 -z-10 blur-xl opacity-50" />
           )}
 
-          {/* THE PRO TOGGLE BUTTON (Shimmering) */}
+          {/* PRO TOGGLE */}
           <button
             onClick={() => setIsPro(!isPro)}
             className={`absolute top-6 right-6 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest overflow-hidden transition-all active:scale-95 ${isPro
-              ? "bg-white text-indigo-600"
-              : "bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]"
+              ? "bg-white text-indigo-900"
+              : "bg-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]"
               }`}
           >
             <span className="relative z-10 flex items-center gap-1.5">
-              <Zap size={10} fill="currentColor" /> {isPro ? "Standard" : "Go Pro"}
+              <Zap size={10} fill="currentColor" />
+              {isPro ? "Standard" : "Go Pro"}
             </span>
-            {/* Shimmer Effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-shimmer-fast animation-delay-500 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-shimmer-fast animation-delay-400 pointer-events-none" />
           </button>
 
+          {/* HEADER */}
           <div className="mb-6">
-            <h3 className="text-2xl font-black mb-2">{isPro ? "Pro Teacher" : "Teachers"}</h3>
+            <h3 className="text-2xl font-black mb-2">
+              {isPro ? "Pro Teacher" : "Teachers"}
+            </h3>
             <p className="text-sm opacity-70 font-medium mb-4">
               {isPro ? "For the power user." : "Manage your studio."}
             </p>
+
             <div className="flex flex-col gap-1">
+              {/* Price row */}
               <div className="flex items-baseline gap-2">
-                {isPro && <span className="text-2xl font-bold line-through opacity-40">$80</span>}
+                {isPro && (
+                  <span className="text-2xl font-bold line-through opacity-40">$80</span>
+                )}
                 <span className="text-5xl font-black">{isPro ? "$40" : "$10"}</span>
-                <span className="text-sm opacity-60 font-bold uppercase tracking-widest">/ Month</span>
+                <span className="text-sm opacity-60 font-bold uppercase tracking-widest">
+                  / Month
+                </span>
               </div>
-              {!isPro && <p className="text-xs font-bold text-red-400 dark:text-red-600 uppercase tracking-wider">+ $5 / student</p>}
+
+              {/* + $5 / student line */}
+              <p
+                className={`text-xs font-bold uppercase tracking-wider ${isPro
+                  ? "opacity-40 text-white/70 dark:text-black/50"
+                  : "text-red-400 dark:text-red-600"
+                  }`}
+              >
+                + $5 / student
+              </p>
             </div>
           </div>
 
+          {/* FEATURES */}
           <ul className="space-y-4 mb-8 flex-1">
             {(isPro
-              ? ["Expanded Dashboard", "Lossless Audio Quality", "Custom Domain Support", "Advanced Analytics", "Priority 24/7 Support"]
-              : ["Teacher Dashboard", "Track Student Practice", "Private Feedback Notes", "Early Access to Features"]
+              ? [
+                "Expanded Dashboard",
+                "Lossless Audio Quality",
+                "Custom Domain Support",
+                "Advanced Analytics",
+                "Priority 24/7 Support",
+              ]
+              : [
+                "Teacher Dashboard",
+                "Track Student Practice",
+                "Private Feedback Notes",
+                "Early Access to Features",
+              ]
             ).map((item, i) => (
-              <li key={i} className="flex items-center gap-3 text-sm font-bold animate-in fade-in slide-in-from-left-2 duration-300">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${isPro ? "bg-white/20" : "bg-white/20 dark:bg-black/10"}`}>
+              <li
+                key={i}
+                className="flex items-center gap-3 text-sm font-bold animate-in fade-in slide-in-from-left-2 duration-300"
+              >
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center ${isPro ? "bg-white/20" : "bg-zinc-100 dark:bg-zinc-800"
+                    }`}
+                >
                   <Check size={14} strokeWidth={3} />
                 </div>
                 {item}
@@ -191,13 +231,19 @@ export default function PricingPage() {
             ))}
           </ul>
 
-          <a href="/connect" className={`w-full py-4 rounded-xl font-black text-xs uppercase tracking-[0.2em] transition-all text-center ${isPro
-            ? "bg-white text-indigo-600 hover:bg-zinc-100 shadow-xl"
-            : "bg-white dark:bg-black text-black dark:text-white hover:scale-105"
-            }`}>
+          {/* CTA */}
+          <Link
+            href={isPro ? "/connect" : "/connect"}
+            className={`w-full py-4 rounded-xl font-black text-xs uppercase tracking-[0.2em] transition-all text-center ${isPro
+              ? "bg-sky-500 text-white hover:brightness-110 hover:scale-[1.02] shadow-lg shadow-sky-500/25 inline-flex justify-center"
+              : "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 inline-flex justify-center"
+              }`}
+          >
             {isPro ? "Coming Soon" : "Get Started"}
-          </a>
+          </Link>
         </div>
+
+
 
         {/* 3. INSTITUTIONAL (New Partnership Plan) */}
         <div className="relative p-8 rounded-[2.5rem] bg-zinc-50 dark:bg-zinc-800/50 border-2 border-dashed border-zinc-200 dark:border-white/10 flex flex-col h-full group hover:border-blue-500/50 transition-colors">

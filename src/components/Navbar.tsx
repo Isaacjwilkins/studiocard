@@ -19,6 +19,7 @@ export default function Navbar() {
   ];
 
   const moreLinks = [
+    { name: "Learn", href: "/learn" }, // Added to the "More" dropdown
     { name: "Connect", href: "/connect" },
     { name: "Pricing", href: "/pricing" },
     { name: "FAQ", href: "/faq" },
@@ -66,7 +67,8 @@ export default function Navbar() {
               onMouseEnter={() => setIsMoreOpen(true)}
               onMouseLeave={() => setIsMoreOpen(false)}
             >
-              <button className={`${getDesktopLinkClasses(pathname.startsWith('/profile') || pathname.startsWith('/pricing') || pathname.startsWith('/faq'))} flex items-center gap-1`}>
+              {/* Added pathname.startsWith('/learn') to active state check */}
+              <button className={`${getDesktopLinkClasses(pathname.startsWith('/profile') || pathname.startsWith('/pricing') || pathname.startsWith('/faq') || pathname.startsWith('/learn'))} flex items-center gap-1`}>
                 More <ChevronDown size={10} className={`transition-transform ${isMoreOpen ? 'rotate-180' : ''}`} />
               </button>
 
