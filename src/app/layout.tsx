@@ -23,6 +23,10 @@ export const metadata: Metadata = {
     locale: 'en_US',
     type: 'website',
   },
+
+  icons: {
+    icon: "/icon.png", // or "/logo.png"
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -36,3 +40,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+
