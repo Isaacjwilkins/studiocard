@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase"; // Ensure this path matches your client config
 import {
-  Download, Play, Pause, Globe, Instagram, CloudLightning, BadgeCheck, Star,
+  Download, Play, Pause, Globe, Instagram, CloudLightning, BadgeCheck,
   Lock, Unlock, Mic, UploadCloud, Loader2, Trash2, StopCircle, X,
   Eye, EyeOff, Music, Zap
 } from 'lucide-react';
@@ -30,8 +30,9 @@ interface Artist {
   caption: string | null;
   current_note: string | null;
   current_assignments: string | null;
-  passcode?: string;
+  access_code?: string; // Grandma Code
   is_private: boolean;
+  slug: string;
   // Socials
   website: string | null;
   instagram: string | null;
@@ -67,23 +68,24 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({});
 
-  // Playback State
-  const [progress, setProgress] = useState(0); // 0 to 100
+  // Playback
+  const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  // Security State
+  // Security State (Grandma Lock)
   const [isPageLocked, setIsPageLocked] = useState(initialArtist.is_private);
   const [pageUnlockInput, setPageUnlockInput] = useState("");
   const [unlockError, setUnlockError] = useState(false);
 
-  // Manager State
-  const [showLogin, setShowLogin] = useState(false);
+  // Manager State (Student Login)
   const [isManager, setIsManager] = useState(false);
-  const [passcodeInput, setPasscodeInput] = useState("");
-  const [uploadMode, setUploadMode] = useState<"hidden" | "select" | "record" | "uploading">("hidden");
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginPasscode, setLoginPasscode] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // Recorder State
+  // Manager Tools
+  const [uploadMode, setUploadMode] = useState<"hidden" | "select" | "record" | "uploading">("hidden");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [trackTitle, setTrackTitle] = useState("");
@@ -91,7 +93,69 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // --- ACTIONS ---
+  // --- 1. AUTH CHECK (Optional Persistence) ---
+  // If Supabase has a saved session in LocalStorage, this auto-logs them in.
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && user.id === artist.id) {
+        setIsManager(true);
+        setIsPageLocked(false);
+      }
+    };
+    checkUser();
+  }, [artist.id]);
+
+
+  // --- 2. THE SIMPLE MANAGER LOGIN ---
+  const handleManagerLogin = async () => {
+    setIsLoggingIn(true);
+
+    // A. Reconstruct the email using the Artist ID (Shadow Account Pattern)
+    const shadowEmail = `${artist.id}@student.studiocard.local`;
+
+    // B. Attempt Login directly from the Client
+    const { error } = await supabase.auth.signInWithPassword({
+      email: shadowEmail,
+      password: loginPasscode
+    });
+
+    if (error) {
+      alert("Incorrect passcode");
+      setIsLoggingIn(false);
+      return;
+    }
+
+    // C. SUCCESS! Just flip the switches. No reload.
+    setIsManager(true);
+    setShowLoginModal(false);
+    setIsPageLocked(false); // Unlock the page if it was private
+    setIsLoggingIn(false);
+
+    // Clear the input
+    setLoginPasscode("");
+  };
+
+
+  // --- 3. PAGE UNLOCK (Grandma Lock) ---
+  const handlePageUnlock = async () => {
+    // Check against the DB 'access_code' column
+    const { data } = await supabase
+      .from('artists')
+      .select('access_code')
+      .eq('id', artist.id)
+      .single();
+
+    if (data && data.access_code === pageUnlockInput) {
+      setIsPageLocked(false);
+      setUnlockError(false);
+    } else {
+      setUnlockError(true);
+    }
+  };
+
+  // --- ACTIONS (Upload/Delete) ---
+  // These work because Step 2 gave us the Auth Token to pass RLS
 
   const refreshTracks = async () => {
     const { data } = await supabase
@@ -102,28 +166,6 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
     if (data) setTracks(data);
   };
 
-  const handlePageUnlock = async () => {
-    const { data } = await supabase.from('artists').select('passcode').eq('id', artist.id).single();
-    if (data && data.passcode === pageUnlockInput) {
-      setIsPageLocked(false);
-      setUnlockError(false);
-    } else {
-      setUnlockError(true);
-    }
-  };
-
-  const handleManagerLogin = async () => {
-    const { data } = await supabase.from('artists').select('passcode').eq('id', artist.id).single();
-    if (data && data.passcode === passcodeInput) {
-      setIsManager(true);
-      setShowLogin(false);
-      setIsPageLocked(false);
-    } else {
-      alert("Incorrect passcode");
-    }
-  };
-
-  // --- DOWNLOAD HANDLER ---
   const handleDownload = async (trackToDownload: Track) => {
     try {
       const response = await fetch(trackToDownload.audio_url);
@@ -137,17 +179,14 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      console.error("Download failed:", err);
       window.open(trackToDownload.audio_url, '_blank');
     }
   };
 
   // --- AUDIO HANDLERS ---
-
   const handlePlayToggle = (trackId: string) => {
     const audio = audioRefs.current[trackId];
     if (!audio) return;
-
     if (playingTrackId === trackId) {
       audio.pause();
       setPlayingTrackId(null);
@@ -159,11 +198,7 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
       setPlayingTrackId(trackId);
       setCurrentTime(audio.currentTime);
       setProgress(0);
-      if (!isNaN(audio.duration) && isFinite(audio.duration)) {
-        setDuration(audio.duration);
-      } else {
-        setDuration(0);
-      }
+      if (!isNaN(audio.duration) && isFinite(audio.duration)) setDuration(audio.duration);
     }
   };
 
@@ -179,9 +214,7 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
   const handleLoadedMetadata = (e: React.SyntheticEvent<HTMLAudioElement>, trackId: string) => {
     if (trackId !== playingTrackId) return;
     const audio = e.currentTarget;
-    if (isFinite(audio.duration)) {
-      setDuration(audio.duration);
-    }
+    if (isFinite(audio.duration)) setDuration(audio.duration);
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>, trackId: string) => {
@@ -202,48 +235,30 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // 1. TRACK VISIBILITY TOGGLE
+  // --- MANAGER ACTIONS ---
   const toggleTrackVisibility = async (track: Track) => {
-    try {
-      const currentStatus = track.is_public === true;
-      const newValue = !currentStatus;
-      setTracks(currentTracks =>
-        currentTracks.map(t => t.id === track.id ? { ...t, is_public: newValue } : t)
-      );
-      const { error } = await supabase
-        .from('tracks')
-        .update({ is_public: newValue })
-        .eq('id', track.id);
-      if (error) {
-        console.error("Supabase Save Error:", error.message);
-        alert(`Could not save visibility: ${error.message}`);
-        setTracks(currentTracks =>
-          currentTracks.map(t => t.id === track.id ? { ...t, is_public: currentStatus } : t)
-        );
-      }
-    } catch (err) {
-      console.error("Unexpected Error:", err);
-      alert("An unexpected error occurred.");
+    const currentStatus = track.is_public === true;
+    const newValue = !currentStatus;
+    setTracks(currentTracks =>
+      currentTracks.map(t => t.id === track.id ? { ...t, is_public: newValue } : t)
+    );
+    const { error } = await supabase.from('tracks').update({ is_public: newValue }).eq('id', track.id);
+    if (error) {
+      alert(`Error: ${error.message}`);
+      setTracks(currentTracks => currentTracks.map(t => t.id === track.id ? { ...t, is_public: currentStatus } : t));
     }
   };
 
   const deleteTrack = async (track: Track) => {
     if (!confirm("Delete this track?")) return;
     const { error } = await supabase.from('tracks').delete().eq('id', track.id);
-    if (error) alert("Error: " + error.message);
+    if (error) alert(error.message);
     else await refreshTracks();
   };
 
-  const displayedTracks = isManager
-    ? tracks
-    : tracks.filter(t => t.is_public === true);
-
-  // --- RECORDER ---
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false }
-      });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       const chunks: BlobPart[] = [];
@@ -290,11 +305,13 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
     } catch (err: any) { alert("Upload failed: " + err.message); setUploadMode("select"); }
   };
 
-  // --- HELPERS ---
+  // --- RENDER HELPERS ---
   const glassStyle = {
     backgroundColor: hexToRgba(artist.card_color, 0.5),
     borderColor: hexToRgba(artist.card_color, 0.2),
   };
+
+  const displayedTracks = isManager ? tracks : tracks.filter(t => t.is_public === true);
 
   const SocialLink = ({ href, icon: Icon, colorClass }: { href: string | null, icon: any, colorClass: string }) => {
     if (!href) return null;
@@ -305,87 +322,88 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
     );
   };
 
-  // --- RENDER ---
   return (
     <div style={glassStyle} className="relative w-full max-w-4xl backdrop-blur-xl rounded-[2.5rem] p-8 md:p-12 shadow-2xl overflow-hidden border transition-colors duration-500 min-h-[600px]">
 
-      {/* 1. LOCK SCREEN */}
+      {/* --- 1. GRANDMA LOCK (Uses access_code) --- */}
       {isPageLocked && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white dark:bg-black p-6 text-center animate-in fade-in duration-700">
+        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-white dark:bg-black p-6 text-center animate-in fade-in duration-700">
           <div className="bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-white/20">
             <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
               <Lock size={32} className="text-zinc-400" />
             </div>
             <h2 className="text-2xl font-black tracking-tight mb-2">Private Studio</h2>
-            <p className="text-zinc-500 mb-6 font-medium">This profile is currently locked.</p>
+            <p className="text-zinc-500 mb-6 font-medium">This profile is locked.</p>
             <div className="space-y-3">
-              <input type="password" placeholder="Enter Passcode" value={pageUnlockInput} onChange={(e) => setPageUnlockInput(e.target.value)}
+              <input type="password" placeholder="Enter Access Code" value={pageUnlockInput} onChange={(e) => setPageUnlockInput(e.target.value)}
                 className="w-full p-4 bg-zinc-100 dark:bg-zinc-800 rounded-xl font-bold text-center tracking-[0.3em] outline-none focus:ring-2 focus:ring-blue-500" />
               <button onClick={handlePageUnlock} className="w-full py-4 bg-foreground text-background font-black uppercase tracking-widest rounded-xl hover:opacity-90">Unlock</button>
-              {unlockError && <p className="text-red-500 text-xs font-bold animate-pulse">Incorrect Passcode</p>}
+              {unlockError && <p className="text-red-500 text-xs font-bold animate-pulse">Incorrect Code</p>}
             </div>
+            {/* Secret Backdoor to Login Modal for Students */}
+            <button onClick={() => setShowLoginModal(true)} className="mt-4 text-[10px] text-zinc-400 font-bold uppercase tracking-widest hover:text-foreground">
+              Are you the student?
+            </button>
           </div>
         </div>
       )}
 
-      {/* 2. LOGIN MODAL */}
-      {showLogin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      {/* --- 2. MANAGER LOGIN MODAL (Uses Passcode + Client Login) --- */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
           <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl w-full max-w-sm shadow-2xl">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-sm uppercase tracking-widest">Student Access</h3>
-              <button onClick={() => setShowLogin(false)}><X size={20} /></button>
+              <h3 className="font-bold text-sm uppercase tracking-widest">Artist Access</h3>
+              <button onClick={() => setShowLoginModal(false)}><X size={20} /></button>
             </div>
-            <input type="password" placeholder="Enter Passcode"
+            <p className="text-xs text-zinc-500 mb-4">Enter your passcode to manage your card.</p>
+            <input
+              type="password"
+              placeholder="0000"
               className="w-full bg-zinc-100 dark:bg-zinc-800 p-4 rounded-xl mb-3 font-bold text-center tracking-[0.5em] outline-none focus:ring-2 focus:ring-blue-500"
-              value={passcodeInput} onChange={(e) => setPasscodeInput(e.target.value)} />
-            <button onClick={handleManagerLogin} className="w-full py-3 bg-black dark:bg-white text-white dark:text-black font-bold rounded-xl">Unlock Studio</button>
+              value={loginPasscode}
+              onChange={(e) => setLoginPasscode(e.target.value)}
+            />
+            <button
+              onClick={handleManagerLogin}
+              disabled={isLoggingIn}
+              className="w-full py-3 bg-black dark:bg-white text-white dark:text-black font-bold rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isLoggingIn ? <Loader2 className="animate-spin" size={16} /> : "Unlock Studio"}
+            </button>
           </div>
         </div>
       )}
 
-      {/* 4. MAIN LAYOUT GRID */}
+      {/* --- 3. MAIN GRID --- */}
       <div className="grid md:grid-cols-[280px_1fr] gap-12 items-start">
-
-        {/* --- LEFT COLUMN --- */}
+        {/* LEFT COLUMN */}
         <div className="flex flex-col items-center space-y-4 w-full">
-
-          {/* Profile Pic - Hidden on Mobile Manager */}
+          {/* Avatar */}
           <div className={`relative aspect-square w-full max-w-[240px] rounded-full overflow-hidden border-4 border-white/10 shadow-2xl bg-black/5 ${isManager ? 'hidden md:block' : 'block'}`}>
             {artist.profile_image_url ? <Image src={artist.profile_image_url} alt={artist.full_name} fill className="object-cover" /> : <div className="w-full h-full flex items-center justify-center">No Image</div>}
           </div>
 
-          {/* Badges - Hidden on Mobile Manager */}
-          {(artist.is_verified || artist.is_premium) && (
-            <div className={`flex flex-wrap justify-center gap-2 my-1 ${isManager ? 'hidden md:flex' : 'flex'}`}>
-              {artist.is_verified && <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 border border-white/10"><BadgeCheck className="text-blue-500" size={14} /><span className="text-[10px] font-bold uppercase text-foreground/80">Verified</span></div>}
-              {artist.is_premium && <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 border border-white/10"><Zap className="text-amber-500 fill-amber-500" size={12} /><span className="text-[10px] font-bold uppercase text-foreground/80">Pro</span></div>}
-            </div>
-          )}
-
-          {/* Practice Mode Button - Always visible, mobile & desktop */}
+          {/* Practice Mode Button */}
           <button
-            onClick={() => isManager ? setIsManager(false) : setShowLogin(true)}
-            className={`flex items-center justify-center gap-2 mt-3 px-6 py-3 rounded-full
-    bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500
-    hover:from-indigo-400 hover:via-violet-400 hover:to-fuchsia-400
-    text-white shadow-xl shadow-indigo-500/40
-    text-xs font-black uppercase tracking-widest
-    transition-all hover:scale-[1.02]
-    flex`}
+            onClick={() => isManager ? setIsManager(false) : setShowLoginModal(true)}
+            className={`group relative flex items-center justify-center gap-2 mt-3 px-6 py-3 rounded-full
+            bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500
+            shadow-xl shadow-purple-500/30 hover:scale-[1.02] hover:shadow-purple-500/50 
+            text-white text-xs font-black uppercase tracking-widest
+            transition-all duration-300`}
           >
             {isManager ? <Unlock size={16} /> : <Lock size={16} />}
             {isManager ? "Exit Practice Mode" : "Practice Mode"}
           </button>
 
-          {/* Socials - Hidden on Mobile Manager */}
+          {/* Socials */}
           <div className={`flex flex-wrap justify-center gap-2 w-full px-2 ${isManager ? 'hidden md:flex' : 'flex'}`}>
             <SocialLink href={artist.instagram} icon={Instagram} colorClass="hover:text-pink-600" />
             <SocialLink href={artist.website} icon={Globe} colorClass="hover:text-indigo-500" />
-            {/* Add other socials */}
           </div>
 
-          {/* STUDENT DASHBOARD - Always visible if Manager. Mobile: Appears here (top of flow). Desktop: Appears in Sidebar. */}
+          {/* Notes */}
           {isManager && (artist.current_assignments || artist.current_note) && (
             <div className="w-full mt-2 space-y-4 animate-in slide-in-from-bottom-2">
               {artist.current_assignments && (
@@ -414,10 +432,9 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
           )}
         </div>
 
-        {/* --- RIGHT COLUMN --- */}
+        {/* RIGHT COLUMN */}
         <div className="space-y-8 mt-4 md:mt-0 w-full min-w-0">
-
-          {/* Name & Bio - Hidden on Mobile Manager (Name is in header) */}
+          {/* Header */}
           <div className={isManager ? 'hidden md:block' : 'block'}>
             <div className="mb-4 text-center md:text-left">
               <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-foreground break-words leading-tight">{artist.full_name}</h1>
@@ -428,9 +445,10 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
             </div>
           </div>
 
-          {/* MANAGER STUDIO PANEL - Always visible if Manager */}
+          {/* Manager Tools */}
           {isManager && (
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-3xl animate-in slide-in-from-top-4 shadow-sm">
+              {/* Same upload UI logic as before */}
               {uploadMode === "hidden" ? (
                 <div className="grid grid-cols-2 gap-4">
                   <button onClick={startRecording} className="flex flex-col items-center gap-2 p-6 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 rounded-2xl transition-colors">
@@ -454,12 +472,7 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
               ) : uploadMode === "select" ? (
                 <div className="space-y-4">
                   <audio controls src={previewUrl!} className="w-full" />
-                  <input
-                    value={trackTitle}
-                    onChange={(e) => setTrackTitle(e.target.value)}
-                    placeholder="Track Title..."
-                    className="w-full p-3 bg-zinc-100 dark:bg-black rounded-xl font-bold text-zinc-900 dark:text-white"
-                  />
+                  <input value={trackTitle} onChange={(e) => setTrackTitle(e.target.value)} placeholder="Track Title..." className="w-full p-3 bg-zinc-100 dark:bg-black rounded-xl font-bold text-zinc-900 dark:text-white" />
                   <div className="flex gap-2">
                     <button onClick={() => setUploadMode("hidden")} className="flex-1 py-3 font-bold opacity-50 text-zinc-900 dark:text-white">Cancel</button>
                     <button onClick={publishTrack} className="flex-1 py-3 bg-foreground text-background rounded-xl font-bold">Publish</button>
@@ -471,10 +484,9 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
             </div>
           )}
 
-          {/* TRACK LIST - With Progress Bar */}
+          {/* Tracks */}
           <div className="space-y-4 pt-4">
             <h3 className="text-xs font-bold uppercase tracking-[0.3em] opacity-50 mb-2 text-center md:text-left">Recordings</h3>
-
             {!displayedTracks.length ? (
               <p className="italic opacity-50 text-center md:text-left">
                 {isManager ? "No tracks yet." : "No public tracks available."}
@@ -482,37 +494,20 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
             ) : (
               displayedTracks.map((track) => {
                 const isPlaying = playingTrackId === track.id;
-                // Default to false (hidden) if null/undefined
                 const isPublic = track.is_public === true;
-
                 return (
                   <div key={track.id} className={`relative p-4 rounded-2xl border transition-all ${isPlaying ? 'bg-white/20 border-foreground/20' : 'bg-black/5 dark:bg-white/5 border-transparent'}`}>
                     <div className="flex items-center justify-between mb-3">
-
-                      {/* Play Button & Title */}
                       <div className="flex items-center gap-4 overflow-hidden flex-1">
                         <button onClick={() => handlePlayToggle(track.id)} className="w-12 h-12 shrink-0 rounded-full bg-foreground text-background flex items-center justify-center shadow-lg transition-transform active:scale-95">
                           {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-1" />}
                         </button>
-
                         <div className="min-w-0 flex-1">
-                          <h4 className={`font-bold text-lg truncate pr-2 ${!isPublic && isManager ? 'opacity-50' : ''}`}>
-                            {track.title}
-                          </h4>
-
-                          {/* PROGRESS BAR - Only visible when playing */}
+                          <h4 className={`font-bold text-lg truncate pr-2 ${!isPublic && isManager ? 'opacity-50' : ''}`}>{track.title}</h4>
                           {isPlaying ? (
                             <div className="flex items-center gap-3 mt-1 pr-4 animate-in fade-in slide-in-from-left-2">
                               <span className="text-[10px] font-mono opacity-60 w-8 text-right">{formatTime(currentTime)}</span>
-                              <input
-                                type="range"
-                                min="0"
-                                max="100"
-                                step="0.1"
-                                value={progress}
-                                onChange={(e) => handleSeek(e, track.id)}
-                                className="flex-1 h-1.5 bg-black/10 dark:bg-white/10 rounded-full appearance-none cursor-pointer accent-foreground"
-                              />
+                              <input type="range" min="0" max="100" step="0.1" value={progress} onChange={(e) => handleSeek(e, track.id)} className="flex-1 h-1.5 bg-black/10 dark:bg-white/10 rounded-full appearance-none cursor-pointer accent-foreground" />
                               <span className="text-[10px] font-mono opacity-60 w-8">{formatTime(duration)}</span>
                             </div>
                           ) : (
@@ -520,54 +515,26 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
                           )}
                         </div>
                       </div>
-
-                      {/* Actions */}
                       <div className="flex gap-2 shrink-0 items-center pl-2">
-                        <button
-                          onClick={() => handleDownload(track)}
-                          className="p-2 opacity-40 hover:opacity-100 transition-opacity"
-                          title="Download File"
-                        >
-                          <Download size={20} />
-                        </button>
-
+                        <button onClick={() => handleDownload(track)} className="p-2 opacity-40 hover:opacity-100 transition-opacity"><Download size={20} /></button>
                         {isManager && (
                           <>
-                            <button
-                              onClick={() => toggleTrackVisibility(track)}
-                              className={`p-2 transition-all hover:bg-black/5 rounded-lg ${isPublic ? 'opacity-100 text-foreground' : 'opacity-100 text-red-500'}`}
-                              title={isPublic ? "Public: Click to Hide" : "Hidden: Click to Show"}
-                            >
+                            <button onClick={() => toggleTrackVisibility(track)} className={`p-2 transition-all hover:bg-black/5 rounded-lg ${isPublic ? 'opacity-100 text-foreground' : 'opacity-100 text-red-500'}`}>
                               {isPublic ? <Eye size={20} /> : <EyeOff size={20} />}
                             </button>
-
-                            <button onClick={() => deleteTrack(track)} className="p-2 text-red-500 opacity-60 hover:opacity-100 hover:bg-red-500/10 rounded-lg transition-all">
-                              <Trash2 size={20} />
-                            </button>
+                            <button onClick={() => deleteTrack(track)} className="p-2 text-red-500 opacity-60 hover:opacity-100 hover:bg-red-500/10 rounded-lg transition-all"><Trash2 size={20} /></button>
                           </>
                         )}
                       </div>
                     </div>
-
-                    {/* Audio Element with Event Listeners */}
-                    <audio
-                      ref={(el) => { audioRefs.current[track.id] = el }}
-                      src={track.audio_url}
-                      onTimeUpdate={(e) => handleTimeUpdate(e, track.id)} // Pass ID
-                      onLoadedMetadata={(e) => handleLoadedMetadata(e, track.id)} // Pass ID
-                      onEnded={() => {
-                        setPlayingTrackId(null);
-                        setProgress(0);
-                      }}
-                      className="hidden"
-                    />
+                    <audio ref={(el) => { audioRefs.current[track.id] = el }} src={track.audio_url} onTimeUpdate={(e) => handleTimeUpdate(e, track.id)} onLoadedMetadata={(e) => handleLoadedMetadata(e, track.id)} onEnded={() => { setPlayingTrackId(null); setProgress(0); }} className="hidden" />
                   </div>
-                );
+                )
               })
             )}
           </div>
 
-          {/* PRIVACY TOGGLE - Redirects to Profiles Page */}
+          {/* Privacy Management Link (If Manager) */}
           {isManager && (
             <div className="pt-8 border-t border-foreground/10">
               <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-foreground/5">
@@ -578,13 +545,13 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
                     <span className="text-xs opacity-60">{artist.is_private ? "Locked" : "Public"}</span>
                   </div>
                 </div>
+                {/* Redirect to students page to edit settings */}
                 <button
-                  onClick={() => (window.location.href = "/students#profile-editor")}
+                  onClick={() => window.location.href = '/students'}
                   className="px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-colors bg-white/10 hover:bg-white/20 text-foreground"
                 >
                   Manage
                 </button>
-
               </div>
             </div>
           )}
@@ -593,4 +560,3 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
     </div>
   );
 }
-

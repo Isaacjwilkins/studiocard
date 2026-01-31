@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -13,17 +13,37 @@ export default function Navbar() {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const { theme, setTheme } = useTheme();
 
+  // --- SCROLL LOGIC ---
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Hide if scrolling DOWN and past 100px (and menu is closed)
+      if (currentScrollY > lastScrollY && currentScrollY > 100 && !isOpen) {
+        setIsVisible(false);
+      } else {
+        setIsVisible(true);
+      }
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY, isOpen]);
+
   const mainLinks = [
     { name: "Students", href: "/students" },
     { name: "Teachers", href: "/teachers" },
   ];
 
   const moreLinks = [
-    { name: "Learn", href: "/learn" }, // Added to the "More" dropdown
+    { name: "Learn", href: "/learn" },
     { name: "Connect", href: "/connect" },
     { name: "Pricing", href: "/pricing" },
     { name: "FAQ", href: "/faq" },
-    { name: "studio.card Live", href: "https://studiocard.live/live", external: true },
   ];
 
   const getDesktopLinkClasses = (isActive: boolean) => `
@@ -31,8 +51,14 @@ export default function Navbar() {
     ${isActive ? "text-foreground" : "text-zinc-500 hover:text-foreground"}
   `;
 
+  // 🔴 FIX: If menu is OPEN, we strip the transform classes entirely
+  // This prevents the "Fixed Child trapped in Transformed Parent" CSS bug
+  const navClasses = isOpen 
+    ? "fixed top-0 w-full z-50" 
+    : `fixed top-0 w-full z-50 transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full md:translate-y-0'}`;
+
   return (
-    <nav className="fixed top-0 w-full z-50">
+    <nav className={navClasses}>
       <div className="w-full border-b border-white/10 dark:border-white/5 bg-white/60 dark:bg-black/80 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
 
@@ -43,9 +69,8 @@ export default function Navbar() {
             </h1>
           </a>
 
+          {/* DESKTOP NAV */}
           <div className="hidden md:flex items-center gap-8">
-            
-            {/* HOME LINK - Changed from Link to <a> for Hard Reset */}
             <a href="/" className={getDesktopLinkClasses(pathname === "/")}>
               Home
             </a>
@@ -67,7 +92,6 @@ export default function Navbar() {
               onMouseEnter={() => setIsMoreOpen(true)}
               onMouseLeave={() => setIsMoreOpen(false)}
             >
-              {/* Added pathname.startsWith('/learn') to active state check */}
               <button className={`${getDesktopLinkClasses(pathname.startsWith('/profile') || pathname.startsWith('/pricing') || pathname.startsWith('/faq') || pathname.startsWith('/learn'))} flex items-center gap-1`}>
                 More <ChevronDown size={10} className={`transition-transform ${isMoreOpen ? 'rotate-180' : ''}`} />
               </button>
@@ -87,11 +111,7 @@ export default function Navbar() {
                           href={link.href}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className={`flex items-center justify-between px-4 py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors
-                            ${link.name === "Studio Live"
-                              ? "text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950"
-                              : "text-zinc-500 hover:text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                            }`}
+                          className="flex items-center justify-between px-4 py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg text-zinc-500 hover:text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
                         >
                           {link.name} <ExternalLink size={10} />
                         </a>
@@ -118,6 +138,7 @@ export default function Navbar() {
             </button>
           </div>
 
+          {/* MOBILE TOGGLES */}
           <div className="md:hidden flex items-center gap-5">
             <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="text-zinc-500 hover:text-foreground">
               {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
@@ -131,6 +152,7 @@ export default function Navbar() {
         </div>
       </div>
 
+      {/* MOBILE MENU */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -142,7 +164,6 @@ export default function Navbar() {
             <div className="flex flex-col h-full pt-24 px-8 overflow-y-auto pb-10">
               <div className="flex flex-col gap-6">
                 
-                {/* MOBILE HOME LINK - Hard Reset */}
                 <a href="/" onClick={() => setIsOpen(false)} className={`text-4xl font-black tracking-tighter ${pathname === "/" ? "text-foreground" : "text-zinc-400"}`}>
                   Home
                 </a>

@@ -1,31 +1,32 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
+import { updateSession } from '@/utils/supabase/middleware'
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const url = request.nextUrl
-  
+
   // 1. Skip paths that should stay as they are (API routes and static files)
   if (
     url.pathname.startsWith('/_next') || 
     url.pathname.startsWith('/api') ||
-    url.pathname.includes('.') // Skips files like .jpg, .svg, .png
+    url.pathname.includes('.')
   ) {
     return NextResponse.next()
   }
 
   // 2. Check if the path has any uppercase letters
+  // (We do this BEFORE Supabase to save resources on redirects)
   if (url.pathname !== url.pathname.toLowerCase()) {
-    // Redirect to the lowercase version (301 Permanent Redirect)
     return NextResponse.redirect(
       new URL(url.pathname.toLowerCase(), request.url),
       301
     )
   }
 
-  return NextResponse.next()
+  // 3. Refresh Supabase Session
+  // This reads/writes cookies to keep the user logged in
+  return await updateSession(request)
 }
 
-// 3. This matcher ensures it runs on all routes except the ones we excluded above
 export const config = {
   matcher: [
     /*

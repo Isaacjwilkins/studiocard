@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Mic, Square, UploadCloud, Play, Trash2, Loader2, CheckCircle } from "lucide-react";
 
@@ -10,20 +10,37 @@ export default function TrackUploader() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [duration, setDuration] = useState(0);
-  
+  const [progress, setProgress] = useState(0);
+
   // Form State
   const [title, setTitle] = useState("");
-  const [artistSlug, setArtistSlug] = useState(""); // Simple ID for now
+  const [artistSlug, setArtistSlug] = useState("");
   const [passcode, setPasscode] = useState("");
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // --- CLEANUP ON UNMOUNT ---
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
   // --- RECORDING LOGIC ---
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      
+      // 1. COMPRESSION & FALLBACK CHECK
+      let options: MediaRecorderOptions = {};
+      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+        options = { mimeType: "audio/webm;codecs=opus", audioBitsPerSecond: 128000 };
+      } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+        options = { mimeType: "audio/mp4", audioBitsPerSecond: 128000 };
+      }
+      
+      const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
       const chunks: BlobPart[] = [];
 
@@ -32,19 +49,18 @@ export default function TrackUploader() {
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: "audio/webm" });
+        const blob = new Blob(chunks, { type: mediaRecorder.mimeType || "audio/webm" });
         const url = URL.createObjectURL(blob);
         setAudioBlob(blob);
         setAudioUrl(url);
-        setMode("select"); // Go to preview/upload screen
-        stream.getTracks().forEach(track => track.stop()); // Stop mic
+        setMode("select"); 
+        stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorder.start();
       setRecording(true);
       setMode("record");
       
-      // Simple timer
       setDuration(0);
       timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
 
@@ -62,7 +78,6 @@ export default function TrackUploader() {
     }
   };
 
-  // --- FILE UPLOAD LOGIC ---
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -71,7 +86,29 @@ export default function TrackUploader() {
     }
   };
 
-  // --- SUBMIT TO SUPABASE ---
+  // --- ROBUST UPLOAD LOGIC ---
+  const uploadWithRetry = async (fileName: string, file: Blob, maxRetries = 3) => {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const { error } = await supabase.storage
+          .from("audio-tracks")
+          .upload(fileName, file, {
+            upsert: false,
+            contentType: file.type,
+            cacheControl: '31536000', // Cache for 1 year (Massive performance boost)
+            duplex: 'half' // Required for some browser streams, good safety
+          });
+          
+        if (error) throw error;
+        return; // Success!
+      } catch (err) {
+        console.warn(`Upload attempt ${i + 1} failed. Retrying...`, err);
+        if (i === maxRetries - 1) throw err; // Throw on final failure
+        await new Promise(res => setTimeout(res, 1000 * (i + 1))); // Wait 1s, 2s, 3s...
+      }
+    }
+  };
+
   const handleUpload = async () => {
     if (!audioBlob || !title || !artistSlug || !passcode) {
       alert("Please fill in all fields (Title, Artist Handle, Passcode)");
@@ -79,6 +116,7 @@ export default function TrackUploader() {
     }
 
     setMode("uploading");
+    setProgress(10); // Start visual feedback
 
     try {
       // 1. Verify Artist
@@ -89,25 +127,23 @@ export default function TrackUploader() {
         .eq("passcode", passcode)
         .single();
 
-      if (artistError || !artist) {
-        throw new Error("Invalid Artist Handle or Passcode.");
-      }
+      if (artistError || !artist) throw new Error("Invalid Artist Handle or Passcode.");
 
-      // 2. Upload File to Storage bucket 'audio-tracks'
-      const fileName = `${artist.id}/${Date.now()}-${title.replace(/\s+/g, '-')}.webm`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from("audio-tracks")
-        .upload(fileName, audioBlob);
+      // 2. Prepare File
+      setProgress(30);
+      const fileExt = audioBlob.type.includes('mp4') ? 'mp4' : 'webm';
+      const fileName = `${artist.id}/${Date.now()}-${title.replace(/\s+/g, '-')}.${fileExt}`;
 
-      if (uploadError) throw uploadError;
+      // 3. Upload with Retries & Caching
+      await uploadWithRetry(fileName, audioBlob);
+      setProgress(80);
 
-      // 3. Get Public URL
+      // 4. Get Public URL
       const { data: publicUrlData } = supabase.storage
         .from("audio-tracks")
         .getPublicUrl(fileName);
 
-      // 4. Save to Database
+      // 5. Save to Database
       const { error: dbError } = await supabase
         .from("tracks")
         .insert([{
@@ -119,11 +155,12 @@ export default function TrackUploader() {
 
       if (dbError) throw dbError;
 
-      setMode("success");
+      setProgress(100);
+      setTimeout(() => setMode("success"), 500);
 
     } catch (error: any) {
       console.error(error);
-      alert(error.message || "Upload failed");
+      alert(error.message || "Upload failed. Please check your connection.");
       setMode("select");
     }
   };
@@ -157,7 +194,6 @@ export default function TrackUploader() {
         <p className="text-zinc-500 text-sm">Upload a file or record directly right now.</p>
       </div>
 
-      {/* RECORDING INTERFACE */}
       {mode === "record" ? (
         <div className="flex flex-col items-center justify-center py-12 space-y-8 animate-pulse">
           <div className="text-6xl font-black text-red-500 font-mono tracking-widest">
@@ -174,7 +210,6 @@ export default function TrackUploader() {
       ) : (
         <div className="space-y-8">
           
-          {/* 1. AUDIO SOURCE SELECTION */}
           {!audioBlob ? (
             <div className="grid grid-cols-2 gap-4">
               <button 
@@ -196,11 +231,14 @@ export default function TrackUploader() {
               </label>
             </div>
           ) : (
-            // 2. PREVIEW & DETAILS
             <div className="space-y-6 animate-in fade-in zoom-in duration-300">
               
               <div className="flex items-center gap-4 p-4 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
-                <button onClick={() => { setAudioBlob(null); setAudioUrl(null); }} className="p-2 text-zinc-400 hover:text-red-500">
+                <button 
+                  onClick={() => { setAudioBlob(null); setAudioUrl(null); }} 
+                  disabled={mode === "uploading"}
+                  className="p-2 text-zinc-400 hover:text-red-500 disabled:opacity-50"
+                >
                   <Trash2 size={20} />
                 </button>
                 <div className="flex-1">
@@ -211,6 +249,21 @@ export default function TrackUploader() {
                 </div>
               </div>
 
+              {mode === "uploading" && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-zinc-500">
+                    <span>Uploading...</span>
+                    <span>{progress}%</span>
+                  </div>
+                  <div className="h-2 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-blue-500 transition-all duration-300 ease-out" 
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-4">
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-3">Track Title</label>
@@ -218,7 +271,8 @@ export default function TrackUploader() {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="e.g. Minuet in G"
-                    className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl p-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    disabled={mode === "uploading"}
+                    className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl p-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-50"
                   />
                 </div>
 
@@ -229,7 +283,8 @@ export default function TrackUploader() {
                       value={artistSlug}
                       onChange={(e) => setArtistSlug(e.target.value)}
                       placeholder="leo-piano"
-                      className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl p-4 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                      disabled={mode === "uploading"}
+                      className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl p-4 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-50"
                     />
                   </div>
                   <div>
@@ -239,7 +294,8 @@ export default function TrackUploader() {
                       value={passcode}
                       onChange={(e) => setPasscode(e.target.value)}
                       placeholder="****"
-                      className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl p-4 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                      disabled={mode === "uploading"}
+                      className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl p-4 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-50"
                     />
                   </div>
                 </div>
@@ -252,7 +308,7 @@ export default function TrackUploader() {
               >
                 {mode === "uploading" ? (
                   <>
-                    <Loader2 className="animate-spin" size={16} /> Uploading...
+                    <Loader2 className="animate-spin" size={16} /> Processing...
                   </>
                 ) : (
                   "Publish Track"
