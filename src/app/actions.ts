@@ -17,74 +17,98 @@ export async function login(formData: FormData) {
     const { error } = await supabase.auth.signInWithPassword(data)
     if (error) redirect('/error')
     revalidatePath('/', 'layout')
-    redirect('/account')
+    redirect('/studio/dashboard') // Redirect to Dashboard
 }
 
 // 2. STUDENT SIGNUP (Creates Shadow Account)
 export async function signupStudent(formData: FormData) {
-    const supabase = await createClient();
-    const supabaseAdmin = createAdminClient();
+    const supabase = await createClient(); // For read-only checks
+    const supabaseAdmin = createAdminClient(); // For Admin writes
 
     const fullName = formData.get("fullName") as string;
-    const passcode = formData.get("passcode") as string; // Auth Password
-    const accessCode = formData.get("accessCode") as string; // Grandma Code
+    const passcode = formData.get("passcode") as string; 
+    const accessCode = formData.get("accessCode") as string; 
     const slug = formData.get("slug") as string;
     const teacherSlug = formData.get("teacherSlug") as string;
     const color = formData.get("color") as string;
 
-    // Validation
+    console.log(`🚀 Starting Signup for: ${fullName} (${slug})`);
+
+    // A. Validation
     const { data: existing } = await supabase.from("artists").select("id").eq("slug", slug).single();
     if (existing) return { error: "That URL is already taken." };
 
-    // Teacher Lookup
+    // B. Teacher Lookup (with Logging)
     let teacherId = null;
     if (teacherSlug) {
-        const { data: teacher } = await supabase.from("teachers").select("id").eq("slug", teacherSlug).single();
-        if (teacher) teacherId = teacher.id;
+        console.log(`🔎 Looking up teacher: ${teacherSlug}`);
+        const { data: teacher } = await supabase.from("teachers").select("id").eq("username", teacherSlug).single();
+        if (teacher) {
+            teacherId = teacher.id;
+            console.log(`✅ Teacher Found: ${teacherId}`);
+        } else {
+            console.log(`⚠️ Teacher '${teacherSlug}' not found.`);
+        }
     }
 
-    // Generate ID & Email
-    const newUserId = crypto.randomUUID();
-    const shadowEmail = getShadowEmail(newUserId);
+    // C. Generate ID
+    // We attempt to define the ID, but we will trust what Auth returns
+    const generatedId = crypto.randomUUID();
+    const shadowEmail = getShadowEmail(generatedId);
 
-    // A. Create Auth User (The "Passcode" goes here, Hashed)
-    const { error: authError } = await supabaseAdmin.auth.admin.createUser({
-        userId: newUserId,
+    // D. Create Auth User
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        userId: generatedId, // Request this ID
         email: shadowEmail,
         password: passcode,
         email_confirm: true,
         user_metadata: { role: "student" }
     });
 
-    if (authError) {
+    if (authError || !authData.user) {
+        console.error("❌ Auth Creation Failed:", authError);
         return { error: "Could not create account. Try a more complex passcode." };
     }
 
-    // B. Create DB Record (NO PASSCODE stored here!)
+    // CRITICAL FIX: Use the ID Supabase *actually* assigned (just in case it ignored ours)
+    const finalUserId = authData.user.id;
+    console.log(`✅ Auth User Created. ID: ${finalUserId}`);
+
+    // E. Create DB Record (Using finalUserId)
     const { error: dbError } = await supabaseAdmin.from("artists").insert({
-        id: newUserId,
+        id: finalUserId, // LINKING TO AUTH ID
         full_name: fullName,
         slug: slug,
-        access_code: accessCode || '1234', // Default Grandma code
+        access_code: accessCode || '1234',
         teacher_id: teacherId,
         card_color: color,
         is_private: false
     });
 
     if (dbError) {
-        await supabaseAdmin.auth.admin.deleteUser(newUserId);
-        return { error: dbError.message };
+        console.error("❌ DB Insert Failed:", dbError);
+        // Cleanup: Delete the orphan auth user
+        await supabaseAdmin.auth.admin.deleteUser(finalUserId);
+        return { error: "Database error: " + dbError.message };
     }
 
-    // C. Auto-Login
+    console.log("✅ DB Record Inserted. Attempting Auto-Login...");
+
+    // F. Auto-Login
+    // We use the original shadow email logic because if Supabase respected our ID, it matches.
+    // If Supabase changed the ID, we need to make sure we use the right email.
+    // Ideally, Supabase respects the ID. If not, the email we sent (shadowEmail) is linked to finalUserId.
     const { error: loginError } = await supabase.auth.signInWithPassword({
         email: shadowEmail,
         password: passcode
     });
 
-    if (loginError) return { error: "Created, but login failed." };
+    if (loginError) {
+        console.error("❌ Auto-Login Failed:", loginError);
+        return { error: "Created, but login failed." };
+    }
 
-    return { success: true, slug, userId: newUserId };
+    return { success: true, slug, userId: finalUserId };
 }
 
 // 3. STUDENT LOGIN
@@ -93,16 +117,16 @@ export async function loginStudent(formData: FormData) {
     const slug = formData.get("slug") as string;
     const passcode = formData.get("passcode") as string;
 
-    // 1. Find User
+    // 1. Find User to get ID
     const { data: artist } = await supabase.from("artists").select("id").eq("slug", slug).single();
 
     if (!artist) {
         return { error: "Card not found." };
     }
 
-    // 2. Log In
+    // 2. Log In using constructed email
     const { error } = await supabase.auth.signInWithPassword({
-        email: `${artist.id}@student.studiocard.local`, // Reconstruct shadow email
+        email: `${artist.id}@student.studiocard.local`, 
         password: passcode
     });
 
@@ -110,30 +134,23 @@ export async function loginStudent(formData: FormData) {
         return { error: "Incorrect passcode." };
     }
 
-    // 3. SUCCESS (Do NOT redirect here)
+    // 3. SUCCESS
     return { success: true };
 }
 
-// ... existing imports (createClient, createAdminClient, etc.)
-
-// 4. TEACHER LOGIN (Updated for Redirect)
+// 4. TEACHER LOGIN
 export async function loginTeacher(formData: FormData) {
     const supabase = await createClient()
     const email = formData.get('email') as string
     const password = formData.get('password') as string
 
-    // 1. Attempt Login
     const { data: authData, error } = await supabase.auth.signInWithPassword({
         email,
         password,
     })
 
-    if (error) {
-        return { error: error.message }
-    }
+    if (error) return { error: error.message }
 
-    // 2. Fetch the Username (Slug) for the redirect
-    // We use the 'id' from the auth response to ensure we get the right teacher
     if (authData.user) {
         const { data: teacher } = await supabase
             .from('teachers')
@@ -149,14 +166,14 @@ export async function loginTeacher(formData: FormData) {
     return { error: "Login successful, but profile not found." }
 }
 
-// --- 5. TEACHER SIGNUP (License Key Model) ---
+// 5. TEACHER SIGNUP
 export async function signupTeacher(formData: FormData) {
-    const supabase = await createClient()       // For logging in at the end
-    const supabaseAdmin = createAdminClient()   // For creating the user & checking codes
+    const supabase = await createClient()       
+    const supabaseAdmin = createAdminClient()   
 
     const fullName = formData.get('fullName') as string
     const email = formData.get('email') as string
-    const username = formData.get('username') as string // This is the "slug"
+    const username = formData.get('username') as string
     const password = formData.get('password') as string
     const licenseKey = formData.get('licenseKey') as string
 
@@ -167,35 +184,27 @@ export async function signupTeacher(formData: FormData) {
         .eq('code', licenseKey)
         .single()
 
-    if (keyError || !keyData) {
-        return { error: "Invalid License Key." }
-    }
-    if (keyData.is_used) {
-        return { error: "This License Key has already been used." }
-    }
+    if (keyError || !keyData) return { error: "Invalid License Key." }
+    if (keyData.is_used) return { error: "This License Key has already been used." }
 
-    // B. Validate Username Uniqueness
+    // B. Validate Username
     const { data: existingUser } = await supabaseAdmin
         .from('teachers')
         .select('id')
         .eq('username', username)
         .single()
 
-    if (existingUser) {
-        return { error: "That username is already taken." }
-    }
+    if (existingUser) return { error: "That username is already taken." }
 
     // C. Create Auth User
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
-        email_confirm: true, // Auto-confirm for smoother UX
+        email_confirm: true,
         user_metadata: { role: 'teacher', tier: keyData.tier }
     })
 
-    if (authError || !authData.user) {
-        return { error: authError?.message || "Failed to create account." }
-    }
+    if (authError || !authData.user) return { error: authError?.message || "Failed to create account." }
 
     const newUserId = authData.user.id
 
@@ -206,19 +215,18 @@ export async function signupTeacher(formData: FormData) {
             id: newUserId,
             email,
             username,
-            slug: username, // <--- ADD THIS LINE (Syncs slug with username)
+            slug: username, // Explicitly saving slug
             full_name: fullName,
             subscription_tier: keyData.tier,
             is_active: true
         })
 
     if (dbError) {
-        // Cleanup: Delete auth user if DB fails to prevent "ghost" accounts
         await supabaseAdmin.auth.admin.deleteUser(newUserId)
         return { error: "Database error: " + dbError.message }
     }
 
-    // E. Burn the License Key (Mark as used)
+    // E. Burn License Key
     await supabaseAdmin
         .from('subscription_codes')
         .update({ is_used: true, used_by: newUserId })
@@ -230,23 +238,18 @@ export async function signupTeacher(formData: FormData) {
         password
     })
 
-    if (loginError) {
-        return { error: "Account created, but auto-login failed. Please sign in." }
-    }
+    if (loginError) return { error: "Account created, but auto-login failed. Please sign in." }
 
     return { success: true, username }
 }
 
-// ... existing imports
-
-// --- 6. GET STUDIO SETTINGS (Account Page) ---
+// 6. GET STUDIO SETTINGS
 export async function getStudioSettings() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) return { error: "Not logged in" };
 
-    // A. Fetch Teacher Profile
     const { data: teacher, error } = await supabase
         .from('teachers')
         .select('*')
@@ -255,20 +258,19 @@ export async function getStudioSettings() {
 
     if (error || !teacher) return { error: "Teacher profile not found" };
 
-    // B. Count Current Students
     const { count } = await supabase
         .from('artists')
-        .select('*', { count: 'exact', head: true }) // 'head' means don't fetch data, just count
+        .select('*', { count: 'exact', head: true })
         .eq('teacher_id', teacher.id);
 
     return {
         teacher,
         studentCount: count || 0,
-        email: user.email // Auth email might differ from DB email if not synced, usually safer to use Auth
+        email: user.email 
     };
 }
 
-// --- 7. UPDATE STUDIO SETTINGS ---
+// 7. UPDATE STUDIO SETTINGS
 export async function updateStudioSettings(formData: FormData) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -278,20 +280,16 @@ export async function updateStudioSettings(formData: FormData) {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    // A. Update Password (if provided)
     if (password && password.trim() !== '') {
         const { error: passError } = await supabase.auth.updateUser({ password });
         if (passError) return { error: `Password Error: ${passError.message}` };
     }
 
-    // B. Update Email (if changed)
-    // Note: This triggers a "Confirm Email" link from Supabase to the new address.
     if (email && email !== user.email) {
         const { error: emailError } = await supabase.auth.updateUser({ email });
         if (emailError) return { error: `Email Error: ${emailError.message}` };
     }
 
-    // C. Update DB Profile
     const { error: dbError } = await supabase
         .from('teachers')
         .update({ full_name: fullName })

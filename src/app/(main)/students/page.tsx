@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
 import { supabase } from '@/lib/supabase';
-import { signupStudent, loginStudent } from '@/app/actions'; // IMPORTS SERVER ACTIONS
+import { signupStudent, loginStudent } from '@/app/actions';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Palette, Music, User,
@@ -34,7 +34,6 @@ const COLORS = [
   { name: "Black", hex: "#000000", class: "bg-black" },
 ];
 
-// Helper to convert Base64 to Blob
 const base64ToBlob = async (url: string) => {
   const res = await fetch(url);
   const blob = await res.blob();
@@ -48,7 +47,7 @@ export default function StudentsPage() {
   const [success, setSuccess] = useState(false);
 
   // Auth State
-  const [isVerified, setIsVerified] = useState(false); // True if logged in via Server Action
+  const [isVerified, setIsVerified] = useState(false);
   const [artistId, setArtistId] = useState<string | null>(null);
 
   // Form Toggles
@@ -61,16 +60,14 @@ export default function StudentsPage() {
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
 
-  // Login Credentials State
+  // Data State
   const [creds, setCreds] = useState({ fullName: '', passcode: '', slug: '', teacherSlug: '' });
-
-  // Profile Data State
   const [formData, setFormData] = useState({
     bio: '',
     color: COLORS[0].hex,
     icon: '',
     isPrivate: false,
-    accessCode: '1234', // Default "Grandma Code"
+    accessCode: '1234',
     socials: {
       instagram: '', youtube: '', tiktok: '',
       website: '', twitter: '', linkedin: '',
@@ -117,7 +114,23 @@ export default function StudentsPage() {
     setImageToCrop(null);
   };
 
-  // --- LOGIC: HANDLE LOGIN (Mode: Login) ---
+  // --- LOGIC: HELPER TO FIND TEACHER ID ---
+  const resolveTeacherId = async (slug: string) => {
+    if (!slug) return null;
+    const { data, error } = await supabase
+      .from('teachers')
+      .select('id')
+      .eq('username', slug)
+      .single();
+
+    if (error || !data) {
+      console.warn("Could not find teacher with slug:", slug);
+      return null;
+    }
+    return data.id;
+  };
+
+  // --- REPLACE THIS FUNCTION IN src/app/students/page.tsx ---
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -130,32 +143,48 @@ export default function StudentsPage() {
       // 1. Call Server Action to Log In
       const result = await loginStudent(formPayload);
 
-      if (result.error) {
-        alert(result.error);
-        setLoading(false);
-        return;
+      if (result.error) throw new Error("Server Action Error: " + result.error);
+
+      // 2. CHECK AUTH SESSION
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        throw new Error("Auth Session Missing. Auth Error: " + (authError?.message || "User is null"));
       }
 
-      // 2. Fetch Profile Data (Now that we are authenticated)
-      const { data: artist } = await supabase
-        .from('artists')
-        .select('*')
-        .eq('slug', creds.slug)
-        .single();
+      console.log("LOGGED IN USER ID:", user.id); // Look for this in console
 
-      if (!artist) throw new Error("Profile not found after login.");
+      // 3. FETCH PROFILE BY ID
+      const { data: artist, error: fetchError } = await supabase
+        .from('artists')
+        .select(`*`) // Remove the teacher join completely
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (fetchError) {
+        // 🚨 THIS IS THE INFO I NEED 🚨
+        throw new Error(`SUPABASE FETCH ERROR: ${fetchError.message} (Code: ${fetchError.code})`);
+      }
+
+      if (!artist) {
+        throw new Error(`NO ARTIST ROW FOUND. User ID ${user.id} exists in Auth, but not in 'artists' table.`);
+      }
 
       setArtistId(artist.id);
       setIsVerified(true);
-      setCreds({ ...creds, fullName: artist.full_name }); // Sync name
 
-      // 3. Populate Form
+      setCreds({
+        ...creds,
+        fullName: artist.full_name,
+        teacherSlug: artist.teachers?.username || ''
+      });
+
       setFormData({
         bio: artist.bio || '',
         color: artist.card_color || COLORS[0].hex,
         icon: artist.profile_image_url || '',
-        isPrivate: artist.is_private,
-        accessCode: artist.access_code || '1234', // Load the code from DB
+        isPrivate: artist.is_private === true,
+        accessCode: artist.access_code || '1234',
         socials: {
           instagram: artist.instagram || '',
           youtube: artist.youtube || '',
@@ -175,8 +204,8 @@ export default function StudentsPage() {
       if (hasSocials) setShowSocials(true);
 
     } catch (err: any) {
-      console.error(err);
-      alert("Error: " + err.message);
+      console.error("FULL ERROR OBJECT:", err);
+      alert(err.message); // This will show us the real problem
     } finally {
       setLoading(false);
     }
@@ -188,44 +217,42 @@ export default function StudentsPage() {
     setLoading(true);
 
     try {
-      // SCENARIO A: SIGNUP (Create New)
+      let targetUserId = artistId;
+      let finalProfileImage = formData.icon;
+
+      // 1. RESOLVE TEACHER ID FIRST
+      const resolvedTeacherId = await resolveTeacherId(creds.teacherSlug);
+
+      // SCENARIO A: SIGNUP
       if (mode === 'signup' && !isVerified) {
         const formPayload = new FormData();
         formPayload.append('fullName', creds.fullName);
         formPayload.append('passcode', creds.passcode);
         formPayload.append('slug', creds.slug);
+
+        // Pass these just in case server action uses them
         formPayload.append('teacherSlug', creds.teacherSlug);
         formPayload.append('color', formData.color);
-        // Append the Grandma Access Code
         formPayload.append('accessCode', formData.accessCode || '1234');
 
-        // 1. Call Server Action (Creates Auth + DB Record)
         const result = await signupStudent(formPayload);
-        
+
         if (result.error) {
-          alert(result.error);
-          setLoading(false);
-          return;
+          throw new Error(result.error);
         }
 
-        // 2. We are now logged in! Set ID
-        setArtistId(result.userId); // Server action returns this
-        
-        // 3. Upload Image (If selected)
-        if (formData.icon && formData.icon.startsWith('data:image')) {
-          await uploadProfileImage(result.userId, formData.icon);
-        }
-      } 
-      // SCENARIO B: UPDATE (Already Verified/Logged In)
-      else if (isVerified && artistId) {
-        // 1. Upload Image if changed
-        let finalProfileImage = formData.icon;
-        if (formData.icon.startsWith('data:image')) {
-          finalProfileImage = await uploadProfileImage(artistId, formData.icon);
-        }
+        targetUserId = result.userId;
+        setArtistId(targetUserId);
+      }
 
-        // 2. Update Record (Client-side RLS allows this now)
-        const { error } = await supabase
+      // SCENARIO B: IMAGE UPLOAD
+      if (targetUserId && formData.icon && formData.icon.startsWith('data:image')) {
+        finalProfileImage = await uploadProfileImage(targetUserId, formData.icon);
+      }
+
+      // SCENARIO C: FORCE UPDATE DB
+      if (targetUserId) {
+        const { error: updateError } = await supabase
           .from('artists')
           .update({
             full_name: creds.fullName,
@@ -233,16 +260,16 @@ export default function StudentsPage() {
             profile_image_url: finalProfileImage,
             bio: formData.bio,
             is_private: formData.isPrivate,
-            access_code: formData.accessCode, // Update the Grandma Code
+            access_code: formData.accessCode,
+            teacher_id: resolvedTeacherId,
             instagram: formData.socials.instagram || null,
             youtube: formData.socials.youtube || null,
             tiktok: formData.socials.tiktok || null,
             website: formData.socials.website || null,
-            // ... other socials can be added here
           })
-          .eq('id', artistId);
+          .eq('id', targetUserId);
 
-        if (error) throw error;
+        if (updateError) throw updateError;
       }
 
       setSuccess(true);
@@ -259,20 +286,14 @@ export default function StudentsPage() {
   const uploadProfileImage = async (uid: string, base64Data: string) => {
     const fileBlob = await base64ToBlob(base64Data);
     const fileName = `profiles/${uid}-${Date.now()}.jpg`;
-    
-    // Using 'audio-tracks' bucket based on your previous code, 
-    // ideally this should be a 'profiles' bucket.
+
     const { error: uploadError } = await supabase.storage
-      .from('audio-tracks') 
+      .from('audio-tracks')
       .upload(fileName, fileBlob, { upsert: true });
 
     if (uploadError) throw uploadError;
-    
+
     const { data: urlData } = supabase.storage.from('audio-tracks').getPublicUrl(fileName);
-    
-    // Update the artist record with the new URL
-    await supabase.from('artists').update({ profile_image_url: urlData.publicUrl }).eq('id', uid);
-    
     return urlData.publicUrl;
   };
 
@@ -385,7 +406,7 @@ export default function StudentsPage() {
                         <input required value={creds.fullName} onChange={(e) => setCreds({ ...creds, fullName: e.target.value })} placeholder="Leo Piano" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
                       </div>
                     </div>
-                    
+
                     {/* Passcode only needed for Signup */}
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Passcode</label>
@@ -397,11 +418,11 @@ export default function StudentsPage() {
 
                     {/* Slug is fixed if editing */}
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Your Custom URL (Slug)</label>
-                        <div className="relative">
-                          <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-                          <input required disabled={mode === 'login'} value={creds.slug} onChange={(e) => setCreds({ ...creds, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })} placeholder="leo-piano" className={`w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all ${mode === 'login' ? 'opacity-50' : ''}`} />
-                        </div>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Your Custom URL (Slug)</label>
+                      <div className="relative">
+                        <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+                        <input required disabled={mode === 'login'} value={creds.slug} onChange={(e) => setCreds({ ...creds, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })} placeholder="leo-piano" className={`w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all ${mode === 'login' ? 'opacity-50' : ''}`} />
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -485,14 +506,14 @@ export default function StudentsPage() {
                   {/* GRANDMA ACCESS CODE (Only Visible if Private) */}
                   {formData.isPrivate && (
                     <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                       <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Grandma Access Code</label>
-                       <input 
-                         value={formData.accessCode} 
-                         onChange={(e) => setFormData({ ...formData, accessCode: e.target.value })} 
-                         placeholder="1234" 
-                         className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-4 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
-                       />
-                       <p className="text-[10px] text-zinc-500 pl-4">Share this code with family so they can view the profile.</p>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Grandma Access Code</label>
+                      <input
+                        value={formData.accessCode}
+                        onChange={(e) => setFormData({ ...formData, accessCode: e.target.value })}
+                        placeholder="1234"
+                        className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-4 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                      />
+                      <p className="text-[10px] text-zinc-500 pl-4">Share this code with family so they can view the profile.</p>
                     </div>
                   )}
 
