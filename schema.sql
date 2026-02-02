@@ -50,7 +50,6 @@ CREATE TABLE IF NOT EXISTS "public"."artists" (
     "is_premium" boolean DEFAULT false,
     "card_color" "text" DEFAULT '#ffffff'::"text",
     "caption" "text",
-    "passcode" "text",
     "is_private" boolean DEFAULT false,
     "teacher_id" "uuid",
     "current_assignments" "text",
@@ -58,7 +57,8 @@ CREATE TABLE IF NOT EXISTS "public"."artists" (
     "email" "text",
     "phone_number" "text",
     "parent_name" "text",
-    "is_pro" boolean DEFAULT false
+    "is_pro" boolean DEFAULT false,
+    "access_code" "text"
 );
 
 
@@ -90,6 +90,21 @@ CREATE TABLE IF NOT EXISTS "public"."lesson_audios" (
 
 
 ALTER TABLE "public"."lesson_audios" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."lesson_schedule" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "teacher_id" "uuid",
+    "student_id" "uuid",
+    "day_of_week" integer NOT NULL,
+    "start_time" time without time zone NOT NULL,
+    "duration_minutes" integer DEFAULT 30,
+    "notes" "text"
+);
+
+
+ALTER TABLE "public"."lesson_schedule" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."lessons" (
@@ -162,6 +177,17 @@ CREATE TABLE IF NOT EXISTS "public"."subscribers" (
 ALTER TABLE "public"."subscribers" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."subscription_codes" (
+    "code" "text" NOT NULL,
+    "tier" "text" NOT NULL,
+    "is_used" boolean DEFAULT false,
+    "used_by" "uuid"
+);
+
+
+ALTER TABLE "public"."subscription_codes" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."teacher_cards" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "title" "text" NOT NULL,
@@ -180,9 +206,14 @@ ALTER TABLE "public"."teacher_cards" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."teachers" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "full_name" "text" NOT NULL,
-    "slug" "text" NOT NULL,
-    "passcode" "text" NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"()
+    "slug" "text",
+    "passcode" "text",
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "email" "text",
+    "username" "text",
+    "subscription_tier" "text" DEFAULT 'base'::"text",
+    "is_active" boolean DEFAULT true,
+    "max_students" integer DEFAULT 5
 );
 
 
@@ -224,6 +255,11 @@ ALTER TABLE ONLY "public"."lesson_audios"
 
 
 
+ALTER TABLE ONLY "public"."lesson_schedule"
+    ADD CONSTRAINT "lesson_schedule_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."lessons"
     ADD CONSTRAINT "lessons_pkey" PRIMARY KEY ("id");
 
@@ -254,6 +290,11 @@ ALTER TABLE ONLY "public"."subscribers"
 
 
 
+ALTER TABLE ONLY "public"."subscription_codes"
+    ADD CONSTRAINT "subscription_codes_pkey" PRIMARY KEY ("code");
+
+
+
 ALTER TABLE ONLY "public"."teacher_cards"
     ADD CONSTRAINT "teacher_cards_pkey" PRIMARY KEY ("id");
 
@@ -271,6 +312,11 @@ ALTER TABLE ONLY "public"."teachers"
 
 ALTER TABLE ONLY "public"."teachers"
     ADD CONSTRAINT "teachers_slug_key" UNIQUE ("slug");
+
+
+
+ALTER TABLE ONLY "public"."teachers"
+    ADD CONSTRAINT "teachers_username_key" UNIQUE ("username");
 
 
 
@@ -303,8 +349,23 @@ CREATE OR REPLACE TRIGGER "message" AFTER INSERT OR UPDATE ON "public"."contact_
 
 
 
+ALTER TABLE ONLY "public"."artists"
+    ADD CONSTRAINT "artists_teacher_id_fkey" FOREIGN KEY ("teacher_id") REFERENCES "public"."teachers"("id") ON DELETE SET NULL;
+
+
+
 ALTER TABLE ONLY "public"."lesson_audios"
     ADD CONSTRAINT "lesson_audios_lesson_id_fkey" FOREIGN KEY ("lesson_id") REFERENCES "public"."lessons"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."lesson_schedule"
+    ADD CONSTRAINT "lesson_schedule_student_id_fkey" FOREIGN KEY ("student_id") REFERENCES "public"."artists"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."lesson_schedule"
+    ADD CONSTRAINT "lesson_schedule_teacher_id_fkey" FOREIGN KEY ("teacher_id") REFERENCES "public"."teachers"("id") ON DELETE CASCADE;
 
 
 
@@ -320,6 +381,11 @@ ALTER TABLE ONLY "public"."student_progress"
 
 ALTER TABLE ONLY "public"."student_progress"
     ADD CONSTRAINT "student_progress_lesson_id_fkey" FOREIGN KEY ("lesson_id") REFERENCES "public"."lessons"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."subscription_codes"
+    ADD CONSTRAINT "subscription_codes_used_by_fkey" FOREIGN KEY ("used_by") REFERENCES "public"."teachers"("id");
 
 
 
@@ -340,6 +406,10 @@ CREATE POLICY "Allow public insert progress" ON "public"."student_progress" FOR 
 
 
 
+CREATE POLICY "Allow public read access" ON "public"."artists" FOR SELECT USING (true);
+
+
+
 CREATE POLICY "Allow public read access" ON "public"."music_catalog" FOR SELECT USING (true);
 
 
@@ -352,10 +422,6 @@ CREATE POLICY "Allow public select progress" ON "public"."student_progress" FOR 
 
 
 
-CREATE POLICY "Allow public update on artists" ON "public"."artists" FOR UPDATE USING (true) WITH CHECK (true);
-
-
-
 CREATE POLICY "Allow public update on tracks" ON "public"."tracks" FOR UPDATE USING (true) WITH CHECK (true);
 
 
@@ -364,7 +430,19 @@ CREATE POLICY "Anyone can subscribe" ON "public"."subscribers" FOR INSERT WITH C
 
 
 
-CREATE POLICY "Enable update for teachers" ON "public"."artists" FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Artists can insert own profile" ON "public"."artists" FOR INSERT WITH CHECK (("auth"."uid"() = "id"));
+
+
+
+CREATE POLICY "Artists can update own profile" ON "public"."artists" FOR UPDATE USING (("auth"."uid"() = "id"));
+
+
+
+CREATE POLICY "Artists can view own profile" ON "public"."artists" FOR SELECT USING (("auth"."uid"() = "id"));
+
+
+
+CREATE POLICY "Enable all for teachers" ON "public"."lesson_schedule" USING (("auth"."uid"() = "teacher_id")) WITH CHECK (("auth"."uid"() = "teacher_id"));
 
 
 
@@ -408,11 +486,19 @@ CREATE POLICY "Public can view music" ON "public"."music_catalog" FOR SELECT USI
 
 
 
+CREATE POLICY "Public can view teachers" ON "public"."teachers" FOR SELECT USING (true);
+
+
+
 CREATE POLICY "Public insert progress" ON "public"."student_progress" FOR INSERT WITH CHECK (true);
 
 
 
 CREATE POLICY "Public profiles are viewable by everyone" ON "public"."teachers" FOR SELECT USING (true);
+
+
+
+CREATE POLICY "Public profiles are visible to everyone" ON "public"."artists" FOR SELECT USING (true);
 
 
 
@@ -436,7 +522,17 @@ CREATE POLICY "Public view lessons" ON "public"."lessons" FOR SELECT USING (true
 
 
 
-CREATE POLICY "Teacher edit policy" ON "public"."artists" FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Teachers can manage own profile" ON "public"."teachers" USING (("auth"."uid"() = "id"));
+
+
+
+CREATE POLICY "Teachers can update own profile" ON "public"."teachers" FOR UPDATE USING (("auth"."uid"() = "id"));
+
+
+
+CREATE POLICY "Teachers can update their students" ON "public"."artists" FOR UPDATE USING (("auth"."uid"() IN ( SELECT "teachers"."id"
+   FROM "public"."teachers"
+  WHERE ("teachers"."id" = "artists"."teacher_id"))));
 
 
 
@@ -445,6 +541,10 @@ CREATE POLICY "Teachers can view own profile" ON "public"."teachers" FOR SELECT 
 
 
 CREATE POLICY "Users can update own profile" ON "public"."artists" FOR UPDATE USING (("auth"."uid"() = "id"));
+
+
+
+CREATE POLICY "Users can update their own profile" ON "public"."artists" FOR UPDATE USING (("auth"."uid"() = "id"));
 
 
 
@@ -463,6 +563,18 @@ ALTER TABLE "public"."lessons" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."music_catalog" ENABLE ROW LEVEL SECURITY;
 
 
+CREATE POLICY "policy_delete_schedule" ON "public"."lesson_schedule" FOR DELETE USING (("auth"."uid"() = "teacher_id"));
+
+
+
+CREATE POLICY "policy_select_schedule" ON "public"."lesson_schedule" FOR SELECT USING (("auth"."uid"() = "teacher_id"));
+
+
+
+CREATE POLICY "policy_update_schedule" ON "public"."lesson_schedule" FOR UPDATE USING (("auth"."uid"() = "teacher_id"));
+
+
+
 ALTER TABLE "public"."profile_requests" ENABLE ROW LEVEL SECURITY;
 
 
@@ -470,6 +582,9 @@ ALTER TABLE "public"."student_progress" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."subscribers" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."subscription_codes" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."teacher_cards" ENABLE ROW LEVEL SECURITY;
@@ -506,6 +621,12 @@ GRANT ALL ON TABLE "public"."lesson_audios" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."lesson_schedule" TO "anon";
+GRANT ALL ON TABLE "public"."lesson_schedule" TO "authenticated";
+GRANT ALL ON TABLE "public"."lesson_schedule" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."lessons" TO "anon";
 GRANT ALL ON TABLE "public"."lessons" TO "authenticated";
 GRANT ALL ON TABLE "public"."lessons" TO "service_role";
@@ -533,6 +654,12 @@ GRANT ALL ON TABLE "public"."student_progress" TO "service_role";
 GRANT ALL ON TABLE "public"."subscribers" TO "anon";
 GRANT ALL ON TABLE "public"."subscribers" TO "authenticated";
 GRANT ALL ON TABLE "public"."subscribers" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."subscription_codes" TO "anon";
+GRANT ALL ON TABLE "public"."subscription_codes" TO "authenticated";
+GRANT ALL ON TABLE "public"."subscription_codes" TO "service_role";
 
 
 
