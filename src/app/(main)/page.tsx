@@ -266,7 +266,7 @@ function InteractiveDemoCard() {
             <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
           </div>
           <div className="ml-4 text-xs text-zinc-400 font-mono">
-            studiocard.live/eliza
+            studiocard.live/lizzy
           </div>
         </div>
 
