@@ -78,7 +78,7 @@ export default function Home() {
       // .trim() removes accidental spaces, .toLowerCase() handles the casing
       const cleanSlug = slug.trim().toLowerCase();
 
-      window.location.href = `https://studiocard.live/${cleanSlug}`;
+      window.location.href = `/${cleanSlug}`;
     };
 
     return (

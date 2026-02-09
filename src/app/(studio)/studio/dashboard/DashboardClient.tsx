@@ -1,110 +1,228 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import {
-    Calendar, DollarSign, TrendingUp, Users,
-    Plus, Clock, Lock, ArrowRight, HelpCircle,
-    LayoutDashboard, Trash2, Sparkles, Settings
+    Calendar, Users,
+    Plus, Clock, HelpCircle,
+    LayoutDashboard, Trash2, Settings,
+    Inbox, Play, Pause, MessageSquare, Check, Send
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import OnboardingModal from "@/components/OnboardingModal"; // 👈 1. Import the Modal
+import OnboardingModal from "@/components/OnboardingModal";
+import UpgradeModal from "@/components/UpgradeModal";
+import { markTrackAsRead, sendFeedback } from "@/app/actions";
+
+interface FeedTrack {
+    id: string;
+    title: string;
+    audio_url: string;
+    created_at: string;
+    is_read: boolean;
+    artist_id: string;
+    artist_name: string;
+    artist_image: string | null;
+}
 
 interface DashboardProps {
     teacher: any;
     students: any[];
     schedule: any[];
+    feedTracks: FeedTrack[];
+    unreadCount: number;
 }
 
-export default function DashboardClient({ teacher, students, schedule: initialSchedule }: DashboardProps) {
+export default function DashboardClient({ teacher, students, schedule: initialSchedule, feedTracks: initialFeedTracks, unreadCount: initialUnreadCount }: DashboardProps) {
     // --- STATE ---
-    const [showOnboarding, setShowOnboarding] = useState(false); // 👈 2. Add State for Modal
+    const [showOnboarding, setShowOnboarding] = useState(false);
+    const [showUpgrade, setShowUpgrade] = useState(false);
+    const [feedTracks, setFeedTracks] = useState<FeedTrack[]>(initialFeedTracks);
+    const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
+    const [feedbackTrackId, setFeedbackTrackId] = useState<string | null>(null);
+    const [feedbackText, setFeedbackText] = useState("");
+    const [sendingFeedback, setSendingFeedback] = useState(false);
+    const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({});
 
     // Capacity Logic
     const studentCount = students.length;
-    const maxStudents = teacher.max_students || 5;
+    const maxStudents = teacher.max_students || 3;
     const spotsLeft = Math.max(0, maxStudents - studentCount);
     const capacityPercent = Math.min((studentCount / maxStudents) * 100, 100);
 
-    // Pro Check
-    const isPro = ['pro', 'enterprise'].includes(teacher.subscription_tier);
+    // Subscription Check
+    const isStudioPlan = teacher.subscription_status === 'active' || teacher.subscription_tier === 'studio';
+    const isFree = !isStudioPlan;
 
-    // --- REUSABLE COMPONENTS ---
+    // Handle onboard button click - check limits
+    const handleOnboardClick = () => {
+        if (isFree && studentCount >= maxStudents) {
+            setShowUpgrade(true);
+        } else {
+            setShowOnboarding(true);
+        }
+    };
 
-    const ProStatsModule = ({ locked }: { locked: boolean }) => (
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-            {/* Income Tracker */}
-            <div className={`relative overflow-hidden rounded-[2.5rem] p-8 border transition-all duration-500 group
-                ${locked
-                    ? 'bg-zinc-900 border-amber-500/30 shadow-[0_0_40px_-10px_rgba(124,58,237,0.3)]'
-                    : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-white/10'
-                }`}
-            >
-                {locked && <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-amber-500/5 pointer-events-none" />}
+    // Handle play/pause
+    const handlePlayToggle = async (track: FeedTrack) => {
+        const audio = audioRefs.current[track.id];
+        if (!audio) return;
 
-                <div className="flex justify-between items-start mb-6 relative z-10">
-                    <div className={`p-4 rounded-2xl ${locked ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'}`}>
-                        <DollarSign size={24} strokeWidth={3} />
-                    </div>
-                    {locked && <Lock className="text-amber-500" size={20} />}
-                </div>
+        if (playingTrackId === track.id) {
+            audio.pause();
+            setPlayingTrackId(null);
+        } else {
+            // Pause any other playing audio
+            if (playingTrackId && audioRefs.current[playingTrackId]) {
+                audioRefs.current[playingTrackId]?.pause();
+            }
+            audio.play();
+            setPlayingTrackId(track.id);
 
-                <h3 className={`font-bold text-xs uppercase tracking-widest mb-2 ${locked ? 'text-amber-500/80' : 'text-zinc-500'}`}>
-                    Estimated Monthly Income
-                </h3>
+            // Mark as read if not already
+            if (!track.is_read) {
+                await markTrackAsRead(track.id);
+                setFeedTracks(prev =>
+                    prev.map(t => t.id === track.id ? { ...t, is_read: true } : t)
+                );
+            }
+        }
+    };
 
-                {locked ? (
-                    <div className="relative z-10">
-                        <div className="text-5xl font-black tracking-tight blur-md opacity-40 select-none text-white">$0,000</div>
-                        <Link href="/checkout" className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-full bg-amber-500 text-black font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform shadow-lg shadow-amber-500/20">
-                            Upgrade to Unlock <ArrowRight size={12} strokeWidth={3} />
-                        </Link>
-                    </div>
-                ) : (
-                    <div>
-                        <div className="text-5xl font-black tracking-tight text-foreground">$1,250.00</div>
-                        <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-500 text-[10px] font-black uppercase tracking-widest">
-                            <Sparkles size={10} /> Pro Active
+    // Handle send feedback
+    const handleSendFeedback = async (artistId: string) => {
+        if (!feedbackText.trim()) return;
+        setSendingFeedback(true);
+
+        const formData = new FormData();
+        formData.append('artistId', artistId);
+        formData.append('type', 'note');
+        formData.append('content', feedbackText);
+
+        const result = await sendFeedback(formData);
+
+        if (result.success) {
+            setFeedbackTrackId(null);
+            setFeedbackText("");
+        } else {
+            alert(result.error || 'Failed to send feedback');
+        }
+        setSendingFeedback(false);
+    };
+
+    // --- INBOX MODULE ---
+    const InboxModule = () => (
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-[2.5rem] shadow-sm overflow-hidden mb-8">
+            <div className="p-6 md:p-8 border-b border-zinc-100 dark:border-white/5">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="p-3 rounded-2xl bg-indigo-500 text-white">
+                            <Inbox size={24} />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold">Inbox</h3>
+                            <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">
+                                Recent student recordings
+                            </p>
                         </div>
                     </div>
-                )}
+                    {feedTracks.filter(t => !t.is_read).length > 0 && (
+                        <div className="px-3 py-1 rounded-full bg-indigo-500 text-white text-xs font-black">
+                            {feedTracks.filter(t => !t.is_read).length} new
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* Practice Stats */}
-            <div className={`relative overflow-hidden rounded-[2.5rem] p-8 border transition-all duration-500
-                ${locked
-                    ? 'bg-zinc-900 border-amber-500/30 shadow-[0_0_40px_-10px_rgba(124,58,237,0.3)]'
-                    : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-white/10'
-                }`}
-            >
-                {locked && <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-amber-500/5 pointer-events-none" />}
-
-                <div className="flex justify-between items-start mb-6 relative z-10">
-                    <div className={`p-4 rounded-2xl ${locked ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'}`}>
-                        <TrendingUp size={24} strokeWidth={3} />
-                    </div>
-                    {locked && <Lock className="text-amber-500" size={20} />}
-                </div>
-
-                <h3 className={`font-bold text-xs uppercase tracking-widest mb-2 ${locked ? 'text-amber-500/80' : 'text-zinc-500'}`}>
-                    Student Practice Rate
-                </h3>
-
-                {locked ? (
-                    <div className="relative z-10">
-                        <div className="text-5xl font-black tracking-tight blur-md opacity-40 select-none text-white">88%</div>
-                        <Link href="/checkout" className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-full bg-amber-500 text-black font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform shadow-lg shadow-amber-500/20">
-                            Upgrade to Unlock <ArrowRight size={12} strokeWidth={3} />
-                        </Link>
+            <div className="divide-y divide-zinc-100 dark:divide-white/5">
+                {feedTracks.length === 0 ? (
+                    <div className="p-8 text-center">
+                        <Inbox size={48} className="mx-auto text-zinc-300 dark:text-zinc-700 mb-4" />
+                        <p className="text-zinc-500 font-medium">No recordings yet</p>
+                        <p className="text-xs text-zinc-400 mt-1">
+                            Recordings from your students will appear here
+                        </p>
                     </div>
                 ) : (
-                    <div>
-                        <div className="text-5xl font-black tracking-tight text-foreground">142 Days</div>
-                        <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-500 text-[10px] font-black uppercase tracking-widest">
-                            <Sparkles size={10} /> Pro Active
-                        </div>
-                    </div>
+                    feedTracks.map(track => {
+                        const isPlaying = playingTrackId === track.id;
+                        const showFeedback = feedbackTrackId === track.id;
+
+                        return (
+                            <div key={track.id} className="p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                                <div className="flex items-center gap-4">
+                                    {/* Unread indicator */}
+                                    <div className="w-2 h-2 shrink-0">
+                                        {!track.is_read && (
+                                            <div className="w-2 h-2 rounded-full bg-indigo-500" />
+                                        )}
+                                    </div>
+
+                                    {/* Play button */}
+                                    <button
+                                        onClick={() => handlePlayToggle(track)}
+                                        className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all ${
+                                            isPlaying
+                                                ? 'bg-indigo-500 text-white'
+                                                : 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                                        }`}
+                                    >
+                                        {isPlaying ? <Pause size={16} /> : <Play size={16} className="ml-0.5" />}
+                                    </button>
+
+                                    {/* Track info */}
+                                    <div className="flex-1 min-w-0">
+                                        <p className={`font-bold truncate ${!track.is_read ? '' : 'text-zinc-600 dark:text-zinc-400'}`}>
+                                            {track.title}
+                                        </p>
+                                        <p className="text-xs text-zinc-500">
+                                            {track.artist_name} &bull; {new Date(track.created_at).toLocaleDateString()}
+                                        </p>
+                                    </div>
+
+                                    {/* Feedback button */}
+                                    <button
+                                        onClick={() => setFeedbackTrackId(showFeedback ? null : track.id)}
+                                        className={`p-2 rounded-lg transition-colors ${
+                                            showFeedback
+                                                ? 'bg-indigo-500 text-white'
+                                                : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-600'
+                                        }`}
+                                    >
+                                        <MessageSquare size={18} />
+                                    </button>
+
+                                    {/* Hidden audio element */}
+                                    <audio
+                                        ref={(el) => { audioRefs.current[track.id] = el }}
+                                        src={track.audio_url}
+                                        onEnded={() => setPlayingTrackId(null)}
+                                        className="hidden"
+                                    />
+                                </div>
+
+                                {/* Feedback input */}
+                                {showFeedback && (
+                                    <div className="mt-3 ml-14 flex gap-2 animate-in slide-in-from-top-2">
+                                        <input
+                                            type="text"
+                                            value={feedbackText}
+                                            onChange={(e) => setFeedbackText(e.target.value)}
+                                            placeholder="Send a note to student..."
+                                            className="flex-1 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                        <button
+                                            onClick={() => handleSendFeedback(track.artist_id)}
+                                            disabled={sendingFeedback || !feedbackText.trim()}
+                                            className="px-4 py-2 bg-indigo-500 text-white rounded-xl font-bold text-sm disabled:opacity-50 flex items-center gap-2"
+                                        >
+                                            <Send size={14} />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })
                 )}
             </div>
         </div>
@@ -113,13 +231,19 @@ export default function DashboardClient({ teacher, students, schedule: initialSc
     return (
         <div className="max-w-6xl mx-auto space-y-12">
 
-            {/* 3. RENDER THE MODAL */}
+            {/* MODALS */}
             <AnimatePresence>
                 {showOnboarding && (
                     <OnboardingModal
                         isOpen={showOnboarding}
                         onClose={() => setShowOnboarding(false)}
                         teacher={teacher}
+                    />
+                )}
+                {showUpgrade && (
+                    <UpgradeModal
+                        isOpen={showUpgrade}
+                        onClose={() => setShowUpgrade(false)}
                     />
                 )}
             </AnimatePresence>
@@ -130,14 +254,31 @@ export default function DashboardClient({ teacher, students, schedule: initialSc
                 <p className="text-zinc-500 font-bold text-lg">Welcome back, {teacher.full_name}.</p>
             </div>
 
-            {/* ORDER LOGIC: Pro Users see stats first */}
-            {isPro && <ProStatsModule locked={false} />}
+            {/* WELCOME BANNER - Show for new teachers with no students */}
+            {studentCount === 0 && (
+                <div className="relative overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[2.5rem] p-8 md:p-12 text-white">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
+                    <div className="relative z-10">
+                        <h2 className="text-2xl md:text-3xl font-black mb-3">Welcome to Studio.Card!</h2>
+                        <p className="text-white/80 mb-6 max-w-lg">
+                            You&apos;re all set up. Now let&apos;s add your first student. They&apos;ll get their own profile page where they can record and share their practice.
+                        </p>
+                        <button
+                            onClick={handleOnboardClick}
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-white text-indigo-600 rounded-xl font-bold text-sm hover:scale-105 transition-transform shadow-lg"
+                        >
+                            <Plus size={18} /> Add Your First Student
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* INBOX - Recent Student Recordings */}
+            {studentCount > 0 && <InboxModule />}
 
             {/* WEEKLY SCHEDULE */}
             <ScheduleManager teacherId={teacher.id} students={students} initialSchedule={initialSchedule} />
-
-            {/* ORDER LOGIC: Free Users see locked stats below */}
-            {!isPro && <ProStatsModule locked={true} />}
 
             {/* CAPACITY */}
             <div className="bg-zinc-100 dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/5 p-8 rounded-[2.5rem]">
@@ -172,12 +313,12 @@ export default function DashboardClient({ teacher, students, schedule: initialSc
                 </div>
             </div>
 
-            {/* 4. QUICK LINKS (UPDATED BUTTON) */}
+            {/* QUICK LINKS */}
             <div className="grid md:grid-cols-3 gap-4 pt-8 border-t border-zinc-200 dark:border-white/10">
 
-                {/* 🔴 This is now a BUTTON that triggers the modal */}
+                {/* Onboard button - checks student limit */}
                 <button
-                    onClick={() => setShowOnboarding(true)}
+                    onClick={handleOnboardClick}
                     className="group p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-3xl shadow-sm hover:scale-[1.02] transition-all text-left"
                 >
                     <div className="w-12 h-12 rounded-2xl bg-amber-500 text-black flex items-center justify-center mb-4 shadow-lg">
@@ -185,14 +326,12 @@ export default function DashboardClient({ teacher, students, schedule: initialSc
                     </div>
                     <h4 className="font-bold text-sm mb-1">Onboard New Student</h4>
                     <p className="text-xs text-zinc-500 font-medium">
-                        Or send the parents{" "}
+                        Or send the parents to{" "}
                         <a
-                            href="https://studiocard.live/onboarding"
+                            href="/onboarding"
                             className="font-bold text-amber-500 hover:text-amber-400 transition-colors"
-                            target="_blank"
-                            rel="noopener noreferrer"
                         >
-                            studiocard.live/onboarding
+                            the onboarding page
                         </a>
                     </p>
                 </button>
@@ -263,7 +402,6 @@ function ScheduleManager({ teacherId, students, initialSchedule }: any) {
             .single();
 
         if (error) {
-            console.error(error); // Debug log
             alert(`Error: ${error.message}`);
         } else {
             setSchedule([...schedule, data]);

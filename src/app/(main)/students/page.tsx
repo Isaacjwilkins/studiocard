@@ -124,7 +124,6 @@ export default function StudentsPage() {
       .single();
 
     if (error || !data) {
-      console.warn("Could not find teacher with slug:", slug);
       return null;
     }
     return data.id;
@@ -151,8 +150,6 @@ export default function StudentsPage() {
       if (authError || !user) {
         throw new Error("Auth Session Missing. Auth Error: " + (authError?.message || "User is null"));
       }
-
-      console.log("LOGGED IN USER ID:", user.id); // Look for this in console
 
       // 3. FETCH PROFILE BY ID
       const { data: artist, error: fetchError } = await supabase
@@ -204,8 +201,7 @@ export default function StudentsPage() {
       if (hasSocials) setShowSocials(true);
 
     } catch (err: any) {
-      console.error("FULL ERROR OBJECT:", err);
-      alert(err.message); // This will show us the real problem
+      alert(err.message);
     } finally {
       setLoading(false);
     }
@@ -241,7 +237,7 @@ export default function StudentsPage() {
           throw new Error(result.error);
         }
 
-        targetUserId = result.userId;
+        targetUserId = result.userId || null;
         setArtistId(targetUserId);
       }
 
@@ -275,7 +271,6 @@ export default function StudentsPage() {
       setSuccess(true);
 
     } catch (err: any) {
-      console.error(err);
       alert("Action failed: " + err.message);
     } finally {
       setLoading(false);

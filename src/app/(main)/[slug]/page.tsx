@@ -36,11 +36,9 @@ export default async function ArtistPage({ params }: { params: Promise<{ slug: s
 
       <div className="w-full max-w-4xl mb-4 flex justify-between items-center">
         <Link href="/" className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 hover:text-foreground transition-colors">
-          ←
+          ← Home
         </Link>
-        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
-          studio.card
-        </div>
+        
       </div>
 
       {/* Render the Client Component */}

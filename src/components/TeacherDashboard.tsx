@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import {
     Music, Search, Save, Loader2, Play, Pause,
     ChevronDown, ChevronUp, Contact, Download,
-    Settings, X, Sparkles, Lock as LockIcon // 👈 FIXED: Renamed to avoid TS conflict
+    Settings, X, Sparkles, Lock as LockIcon, Camera, Upload
 } from 'lucide-react';
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -151,10 +151,15 @@ function StudentRow({ student, tracks }: any) {
         parent_name: student.parent_name || "",
         email: student.email || "",
         phone_number: student.phone_number || "",
-        passcode: student.passcode || ""
+        access_code: student.access_code || ""
     });
 
     const [isSaving, setIsSaving] = useState(false);
+
+    // Profile Image State
+    const [profileImage, setProfileImage] = useState(student.profile_image_url || "");
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Layout State (Fixed Hydration Issue)
     const [isExpanded, setIsExpanded] = useState(false);
@@ -245,6 +250,42 @@ function StudentRow({ student, tracks }: any) {
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     };
 
+    // --- PROFILE IMAGE UPLOAD ---
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploadingImage(true);
+
+        try {
+            const fileName = `profiles/${student.id}-${Date.now()}.jpg`;
+            const { error: uploadError } = await supabase.storage
+                .from('audio-tracks')
+                .upload(fileName, file, { upsert: true });
+
+            if (uploadError) throw uploadError;
+
+            const { data: urlData } = supabase.storage
+                .from('audio-tracks')
+                .getPublicUrl(fileName);
+
+            // Update local state
+            setProfileImage(urlData.publicUrl);
+
+            // Update database
+            const { error: dbError } = await supabase
+                .from('artists')
+                .update({ profile_image_url: urlData.publicUrl })
+                .eq('id', student.id);
+
+            if (dbError) throw dbError;
+        } catch (err: any) {
+            alert("Upload failed: " + err.message);
+        } finally {
+            setIsUploadingImage(false);
+        }
+    };
+
     // --- SAVE ALL DATA ---
     const handleUpdate = async () => {
         setIsSaving(true);
@@ -256,7 +297,7 @@ function StudentRow({ student, tracks }: any) {
                 parent_name: contactInfo.parent_name,
                 email: contactInfo.email,
                 phone_number: contactInfo.phone_number,
-                passcode: contactInfo.passcode
+                access_code: contactInfo.access_code
             })
             .eq('id', student.id);
 
@@ -290,8 +331,38 @@ function StudentRow({ student, tracks }: any) {
                 className="p-5 md:p-6 cursor-pointer lg:cursor-default flex items-center justify-between group"
             >
                 <div className="flex items-center gap-4 md:gap-6 flex-1 min-w-0">
-                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-white/10 overflow-hidden shrink-0">
-                        {student.profile_image_url && <img src={student.profile_image_url} className="w-full h-full object-cover" />}
+                    {/* Profile Image with Upload */}
+                    <div className="relative group shrink-0">
+                        <input
+                            type="file"
+                            accept="image/*"
+                            ref={fileInputRef}
+                            onChange={handleImageUpload}
+                            className="hidden"
+                        />
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                fileInputRef.current?.click();
+                            }}
+                            disabled={isUploadingImage}
+                            className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-white/10 overflow-hidden relative"
+                        >
+                            {profileImage ? (
+                                <img src={profileImage} className="w-full h-full object-cover" alt={student.full_name} />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-zinc-400">
+                                    <Camera size={20} />
+                                </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                {isUploadingImage ? (
+                                    <Loader2 className="text-white animate-spin" size={16} />
+                                ) : (
+                                    <Upload className="text-white" size={16} />
+                                )}
+                            </div>
+                        </button>
                     </div>
 
                     <div className="flex-1 min-w-0 grid md:grid-cols-[1.5fr_1fr] gap-4 items-center">
@@ -375,11 +446,11 @@ function StudentRow({ student, tracks }: any) {
                                                     </div>
 
                                                     <div className="grid grid-cols-[80px_1fr] items-center gap-2">
-                                                        {/* 4. FIXED: Using LockIcon to avoid TypeScript error */}
-                                                        <span className="text-[10px] font-bold uppercase text-zinc-400 flex items-center gap-1"><LockIcon size={10} /> Passcode</span>
+                                                        {/* Access code for family viewing */}
+                                                        <span className="text-[10px] font-bold uppercase text-zinc-400 flex items-center gap-1"><LockIcon size={10} /> Access Code</span>
                                                         <input
-                                                            value={contactInfo.passcode}
-                                                            onChange={(e) => setContactInfo({ ...contactInfo, passcode: e.target.value })}
+                                                            value={contactInfo.access_code}
+                                                            onChange={(e) => setContactInfo({ ...contactInfo, access_code: e.target.value })}
                                                             placeholder="1234"
                                                             className="bg-transparent border-b border-zinc-300 dark:border-zinc-700 focus:border-purple-500 outline-none py-1 font-bold text-foreground w-full font-mono"
                                                         />
@@ -429,7 +500,7 @@ function StudentRow({ student, tracks }: any) {
                                                             </div>
                                                         </div>
 
-                                                        <a href={track.audio_url} target="_blank" download className="p-2 opacity-50 hover:opacity-100"><Download size={16} /></a>
+                                                        <a href={track.audio_url} target="_blank" rel="noopener noreferrer" download className="p-2 opacity-50 hover:opacity-100"><Download size={16} /></a>
                                                     </div>
 
                                                     {isPlaying && (

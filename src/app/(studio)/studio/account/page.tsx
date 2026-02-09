@@ -9,43 +9,31 @@ export default async function StudioAccountPage() {
   const { data: { user } } = await supabase.auth.getUser();
   const result = await getStudioSettings();
 
-  // --- DEBUGGING SCREEN ---
+  // Handle access errors gracefully
   if ('error' in result) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-zinc-50 dark:bg-black font-mono">
-        <div className="max-w-2xl w-full bg-white dark:bg-zinc-900 p-8 rounded-3xl border border-red-200">
-          <h1 className="text-2xl font-bold text-red-500 mb-4">Debug: Access Denied</h1>
-          
-          <div className="space-y-4 text-sm">
-            <div className="p-4 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
-              <p className="font-bold text-zinc-500 uppercase tracking-widest text-[10px]">Auth Status</p>
-              <p>{user ? `Logged In as ${user.email}` : "Not Logged In"}</p>
-              <p className="text-xs text-zinc-400 mt-1">ID: {user?.id}</p>
-            </div>
-
-            <div className="p-4 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
-              <p className="font-bold text-zinc-500 uppercase tracking-widest text-[10px]">Server Action Result</p>
-              <pre className="text-red-500 whitespace-pre-wrap">{JSON.stringify(result, null, 2)}</pre>
-            </div>
-            
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-xl">
-              <strong>Hypothesis:</strong> You are likely logged in as a Student/Artist (from previous testing). 
-              Student IDs exist in the `artists` table, not the `teachers` table.
-            </div>
-
-            {/* FORCE LOGOUT BUTTON */}
-            <form action={async () => {
-              'use server';
-              const sb = await createClient();
-              await sb.auth.signOut();
-            }}>
-              <button className="w-full py-4 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-all">
-                Force Log Out
-              </button>
-            </form>
+      <main className="min-h-screen pt-24 pb-20 px-4 md:px-8 bg-zinc-50 dark:bg-black flex items-center justify-center">
+        <div className="max-w-md w-full text-center space-y-6">
+          <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m2-10a4 4 0 100 8 4 4 0 000-8z" />
+            </svg>
           </div>
+          <h1 className="text-2xl font-black tracking-tight">Access Denied</h1>
+          <p className="text-zinc-500">
+            You need to be logged in as a teacher to access this page.
+          </p>
+          <form action={async () => {
+            'use server';
+            const sb = await createClient();
+            await sb.auth.signOut();
+          }}>
+            <button className="px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-black font-bold rounded-xl hover:opacity-90 transition-all">
+              Sign Out & Try Again
+            </button>
+          </form>
         </div>
-      </div>
+      </main>
     );
   }
 

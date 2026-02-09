@@ -30,6 +30,7 @@ interface Artist {
   caption: string | null;
   current_note: string | null;
   current_assignments: string | null;
+  audio_feedback_url: string | null;
   access_code?: string; // Grandma Code
   is_private: boolean;
   slug: string;
@@ -316,7 +317,7 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
   const SocialLink = ({ href, icon: Icon, colorClass }: { href: string | null, icon: any, colorClass: string }) => {
     if (!href) return null;
     return (
-      <a href={href} target="_blank" rel="noopener" className={`p-3 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-sm transition-all hover:scale-110 ${colorClass}`}>
+      <a href={href} target="_blank" rel="noopener noreferrer" className={`p-3 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-sm transition-all hover:scale-110 ${colorClass}`}>
         <Icon size={18} />
       </a>
     );
@@ -403,9 +404,23 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
             <SocialLink href={artist.website} icon={Globe} colorClass="hover:text-indigo-500" />
           </div>
 
-          {/* Notes */}
-          {isManager && (artist.current_assignments || artist.current_note) && (
+          {/* Teacher Feedback Section */}
+          {isManager && (artist.current_assignments || artist.current_note || artist.audio_feedback_url) && (
             <div className="w-full mt-2 space-y-4 animate-in slide-in-from-bottom-2">
+              {/* Audio Feedback */}
+              {artist.audio_feedback_url && (
+                <div
+                  className="p-5 rounded-r-xl rounded-l-md shadow-sm border-y border-r border-l-[6px] bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 transition-colors"
+                  style={{ borderLeftColor: artist.card_color || '#6366f1', borderColor: hexToRgba(artist.card_color, 0.2) }}
+                >
+                  <h4 className="text-[10px] font-black uppercase tracking-widest mb-3 flex items-center gap-2 text-purple-700 dark:text-purple-300">
+                    <Mic size={12} /> Voice Note from Teacher
+                  </h4>
+                  <audio controls src={artist.audio_feedback_url} className="w-full h-10" />
+                </div>
+              )}
+
+              {/* Assignments */}
               {artist.current_assignments && (
                 <div
                   className="p-5 rounded-r-xl rounded-l-md shadow-sm border-y border-r border-l-[6px] bg-white dark:bg-zinc-900 transition-colors"
@@ -417,6 +432,8 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
                   <p className="text-sm font-bold leading-relaxed whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">{artist.current_assignments}</p>
                 </div>
               )}
+
+              {/* Teacher Note */}
               {artist.current_note && (
                 <div
                   className="p-5 rounded-r-xl rounded-l-md shadow-sm border-y border-r border-l-[6px] bg-white dark:bg-zinc-900 transition-colors"
@@ -556,6 +573,22 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
             </div>
           )}
         </div>
+      </div>
+
+      {/* Viral Footer */}
+      <div className="mt-8 pt-6 border-t border-white/10 text-center">
+        <p className="text-xs font-medium text-white/60">
+          Powered by{' '}
+          <a
+            href="https://studiocard.live"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-bold text-white/80 hover:text-white transition-colors"
+          >
+            Studio.Card
+          </a>
+          {' '}&ndash; Ask your teacher about it.
+        </p>
       </div>
     </div>
   );

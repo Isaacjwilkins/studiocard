@@ -28,10 +28,8 @@ export default function OnboardingPage() {
         if (data && !error) {
             setTeacher(data);
             foundProfile = true;
-        } else {
-            console.error("⚠️ Logged in, but could not load profile:", error?.message);
-            // Fallback will trigger below
         }
+        // Fallback will trigger below if profile not found
       } 
       
       // B. FALLBACK / GUEST MODE

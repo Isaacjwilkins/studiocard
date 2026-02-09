@@ -22,7 +22,7 @@ export default function Navbar() {
   // Updated Hamburger/More Links
   const moreLinks = [
     { name: "Studio", href: "/live/studio" },
-    { name: "Connect", href: "/live/connect" },
+    { name: "Support", href: "/support" },
     { name: "studio.card", href: "https://studiocard.live", external: true }, // Kept Learn here as it fits the "App" side
   ];
 

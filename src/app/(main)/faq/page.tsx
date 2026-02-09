@@ -105,7 +105,7 @@ export default function FAQPage() {
             <p className="text-sm text-zinc-500">Email us directly for help.</p>
           </a>
 
-          <a href="https://studiocard.live" target="_blank" className="group p-6 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 hover:border-zinc-400 transition-colors">
+          <a href="https://studiocard.live" target="_blank" rel="noopener noreferrer" className="group p-6 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 hover:border-zinc-400 transition-colors">
             <div className="mb-4 w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 flex items-center justify-center">
               <ExternalLink size={20} />
             </div>

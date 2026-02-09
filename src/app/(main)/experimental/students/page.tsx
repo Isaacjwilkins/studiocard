@@ -50,8 +50,14 @@ export default function StudentsPage() {
     if (result.error) {
       alert(result.error);
     } else if (result.success) {
-      // Redirect to their card
-      window.location.href = `/${result.slug}`;
+      // Redirect to their card (slug is only returned from signup)
+      if ('slug' in result && result.slug) {
+        window.location.href = `/${result.slug}`;
+      } else {
+        // For login, get slug from form
+        const slug = formData.get('slug') as string;
+        window.location.href = `/${slug}`;
+      }
     }
   };
 

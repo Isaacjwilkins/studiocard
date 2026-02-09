@@ -55,9 +55,12 @@ export default function StudioNavbar() {
     router.push("/studio");
   };
 
+  // Students link requires username - fallback to students list page
+  const studentsHref = username ? `/studio/${username}` : "/studio/students";
+
   const navLinks = [
-    { name: "Home", href: "/studio/dashboard", icon: LayoutGrid },
-    { name: "Students", href: username ? `/studio/${username}` : "#", icon: Users },
+    { name: "Dashboard", href: "/studio/dashboard", icon: LayoutGrid },
+    { name: "Students", href: studentsHref, icon: Users },
     { name: "Account", href: "/studio/account", icon: User },
   ];
 

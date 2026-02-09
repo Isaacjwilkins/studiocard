@@ -32,24 +32,34 @@ export async function signupStudent(formData: FormData) {
     const teacherSlug = formData.get("teacherSlug") as string;
     const color = formData.get("color") as string;
 
-    console.log(`🚀 Starting Signup for: ${fullName} (${slug})`);
 
-    // A. Validation
+    // A. Teacher Code Required
+    if (!teacherSlug) {
+        return { error: "A teacher code is required to sign up." };
+    }
+
+    // B. Validation
     const { data: existing } = await supabase.from("artists").select("id").eq("slug", slug).single();
     if (existing) return { error: "That URL is already taken." };
 
-    // B. Teacher Lookup (with Logging)
-    let teacherId = null;
-    if (teacherSlug) {
-        console.log(`🔎 Looking up teacher: ${teacherSlug}`);
-        const { data: teacher } = await supabase.from("teachers").select("id").eq("username", teacherSlug).single();
-        if (teacher) {
-            teacherId = teacher.id;
-            console.log(`✅ Teacher Found: ${teacherId}`);
-        } else {
-            console.log(`⚠️ Teacher '${teacherSlug}' not found.`);
-        }
+    // C. Teacher Lookup (Required)
+    const { data: teacher } = await supabase.from("teachers").select("id, max_students").eq("username", teacherSlug).single();
+
+    if (!teacher) {
+        return { error: "Invalid teacher code. Please check with your teacher." };
     }
+
+    // D. Check teacher's student limit
+    const { count: studentCount } = await supabase
+        .from("artists")
+        .select("*", { count: 'exact', head: true })
+        .eq("teacher_id", teacher.id);
+
+    if (studentCount !== null && studentCount >= (teacher.max_students || 3)) {
+        return { error: "This teacher's studio is at capacity. Please contact your teacher." };
+    }
+
+    const teacherId = teacher.id;
 
     // C. Generate ID
     // We attempt to define the ID, but we will trust what Auth returns
@@ -58,7 +68,7 @@ export async function signupStudent(formData: FormData) {
 
     // D. Create Auth User
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        userId: generatedId, // Request this ID
+        id: generatedId, // Request this ID
         email: shadowEmail,
         password: passcode,
         email_confirm: true,
@@ -66,13 +76,11 @@ export async function signupStudent(formData: FormData) {
     });
 
     if (authError || !authData.user) {
-        console.error("❌ Auth Creation Failed:", authError);
         return { error: "Could not create account. Try a more complex passcode." };
     }
 
     // CRITICAL FIX: Use the ID Supabase *actually* assigned (just in case it ignored ours)
     const finalUserId = authData.user.id;
-    console.log(`✅ Auth User Created. ID: ${finalUserId}`);
 
     // E. Create DB Record (Using finalUserId)
     const { error: dbError } = await supabaseAdmin.from("artists").insert({
@@ -86,13 +94,11 @@ export async function signupStudent(formData: FormData) {
     });
 
     if (dbError) {
-        console.error("❌ DB Insert Failed:", dbError);
         // Cleanup: Delete the orphan auth user
         await supabaseAdmin.auth.admin.deleteUser(finalUserId);
         return { error: "Database error: " + dbError.message };
     }
 
-    console.log("✅ DB Record Inserted. Attempting Auto-Login...");
 
     // F. Auto-Login
     // We use the original shadow email logic because if Supabase respected our ID, it matches.
@@ -104,7 +110,6 @@ export async function signupStudent(formData: FormData) {
     });
 
     if (loginError) {
-        console.error("❌ Auto-Login Failed:", loginError);
         return { error: "Created, but login failed." };
     }
 
@@ -138,7 +143,23 @@ export async function loginStudent(formData: FormData) {
     return { success: true };
 }
 
-// 4. TEACHER LOGIN
+// 4. PASSWORD RESET REQUEST
+export async function requestPasswordReset(formData: FormData) {
+    const supabase = await createClient();
+    const email = formData.get('email') as string;
+
+    if (!email) return { error: "Email is required" };
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/studio/reset-password`,
+    });
+
+    if (error) return { error: error.message };
+
+    return { success: true };
+}
+
+// 5. TEACHER LOGIN
 export async function loginTeacher(formData: FormData) {
     const supabase = await createClient()
     const email = formData.get('email') as string
@@ -166,28 +187,17 @@ export async function loginTeacher(formData: FormData) {
     return { error: "Login successful, but profile not found." }
 }
 
-// 5. TEACHER SIGNUP
+// 5. TEACHER SIGNUP (No license key required - free tier by default)
 export async function signupTeacher(formData: FormData) {
-    const supabase = await createClient()       
-    const supabaseAdmin = createAdminClient()   
+    const supabase = await createClient()
+    const supabaseAdmin = createAdminClient()
 
     const fullName = formData.get('fullName') as string
     const email = formData.get('email') as string
     const username = formData.get('username') as string
     const password = formData.get('password') as string
-    const licenseKey = formData.get('licenseKey') as string
 
-    // A. Validate License Key
-    const { data: keyData, error: keyError } = await supabaseAdmin
-        .from('subscription_codes')
-        .select('*')
-        .eq('code', licenseKey)
-        .single()
-
-    if (keyError || !keyData) return { error: "Invalid License Key." }
-    if (keyData.is_used) return { error: "This License Key has already been used." }
-
-    // B. Validate Username
+    // A. Validate Username
     const { data: existingUser } = await supabaseAdmin
         .from('teachers')
         .select('id')
@@ -196,28 +206,30 @@ export async function signupTeacher(formData: FormData) {
 
     if (existingUser) return { error: "That username is already taken." }
 
-    // C. Create Auth User
+    // B. Create Auth User
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
         email_confirm: true,
-        user_metadata: { role: 'teacher', tier: keyData.tier }
+        user_metadata: { role: 'teacher', tier: 'free' }
     })
 
     if (authError || !authData.user) return { error: authError?.message || "Failed to create account." }
 
     const newUserId = authData.user.id
 
-    // D. Create Teacher DB Record
+    // C. Create Teacher DB Record (Free tier: 3 students)
     const { error: dbError } = await supabaseAdmin
         .from('teachers')
         .insert({
             id: newUserId,
             email,
             username,
-            slug: username, // Explicitly saving slug
+            slug: username,
             full_name: fullName,
-            subscription_tier: keyData.tier,
+            subscription_tier: 'free',
+            subscription_status: 'free',
+            max_students: 3,
             is_active: true
         })
 
@@ -226,13 +238,7 @@ export async function signupTeacher(formData: FormData) {
         return { error: "Database error: " + dbError.message }
     }
 
-    // E. Burn License Key
-    await supabaseAdmin
-        .from('subscription_codes')
-        .update({ is_used: true, used_by: newUserId })
-        .eq('code', licenseKey)
-
-    // F. Auto-Login
+    // D. Auto-Login
     const { error: loginError } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -240,7 +246,7 @@ export async function signupTeacher(formData: FormData) {
 
     if (loginError) return { error: "Account created, but auto-login failed. Please sign in." }
 
-    return { success: true, username }
+    return { success: true, username, isNewUser: true }
 }
 
 // 6. GET STUDIO SETTINGS
@@ -299,4 +305,200 @@ export async function updateStudioSettings(formData: FormData) {
 
     revalidatePath('/studio/account');
     return { success: true };
+}
+
+// 8. GET TEACHER FEED (Inbox)
+export async function getTeacherFeed() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { error: "Not logged in", tracks: [] };
+
+    // Get all student IDs for this teacher
+    const { data: students } = await supabase
+        .from('artists')
+        .select('id, full_name, profile_image_url')
+        .eq('teacher_id', user.id);
+
+    if (!students || students.length === 0) {
+        return { tracks: [], unreadCount: 0 };
+    }
+
+    const studentIds = students.map(s => s.id);
+
+    // Get last 20 tracks from teacher's students
+    const { data: tracks, error } = await supabase
+        .from('tracks')
+        .select('id, title, audio_url, created_at, is_read, artist_id')
+        .in('artist_id', studentIds)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+    if (error) return { error: error.message, tracks: [] };
+
+    // Join artist info to tracks
+    const tracksWithArtist = (tracks || []).map(track => {
+        const artist = students.find(s => s.id === track.artist_id);
+        return {
+            ...track,
+            artist_name: artist?.full_name || 'Unknown',
+            artist_image: artist?.profile_image_url || null
+        };
+    });
+
+    const unreadCount = tracksWithArtist.filter(t => !t.is_read).length;
+
+    return { tracks: tracksWithArtist, unreadCount };
+}
+
+// 9. MARK TRACK AS READ
+export async function markTrackAsRead(trackId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { error: "Not logged in" };
+
+    // Verify teacher owns this student's track
+    const { data: track } = await supabase
+        .from('tracks')
+        .select('artist_id')
+        .eq('id', trackId)
+        .single();
+
+    if (!track) return { error: "Track not found" };
+
+    const { data: artist } = await supabase
+        .from('artists')
+        .select('teacher_id')
+        .eq('id', track.artist_id)
+        .single();
+
+    if (!artist || artist.teacher_id !== user.id) {
+        return { error: "Not authorized" };
+    }
+
+    const { error } = await supabase
+        .from('tracks')
+        .update({ is_read: true })
+        .eq('id', trackId);
+
+    if (error) return { error: error.message };
+
+    revalidatePath('/studio/dashboard');
+    return { success: true };
+}
+
+// 10. SEND FEEDBACK
+export async function sendFeedback(formData: FormData) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { error: "Not logged in" };
+
+    const artistId = formData.get('artistId') as string;
+    const feedbackType = formData.get('type') as string; // 'note' or 'assignment'
+    const content = formData.get('content') as string;
+
+    // Verify teacher owns this student
+    const { data: artist } = await supabase
+        .from('artists')
+        .select('teacher_id')
+        .eq('id', artistId)
+        .single();
+
+    if (!artist || artist.teacher_id !== user.id) {
+        return { error: "Not authorized" };
+    }
+
+    const updateField = feedbackType === 'assignment' ? 'current_assignments' : 'current_note';
+
+    const { error } = await supabase
+        .from('artists')
+        .update({ [updateField]: content })
+        .eq('id', artistId);
+
+    if (error) return { error: error.message };
+
+    revalidatePath('/studio/dashboard');
+    return { success: true };
+}
+
+// 11. CHECK STUDENT LIMIT
+export async function checkStudentLimit() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { error: "Not logged in" };
+
+    const { data: teacher } = await supabase
+        .from('teachers')
+        .select('max_students, subscription_status')
+        .eq('id', user.id)
+        .single();
+
+    if (!teacher) return { error: "Teacher not found" };
+
+    const { count } = await supabase
+        .from('artists')
+        .select('*', { count: 'exact', head: true })
+        .eq('teacher_id', user.id);
+
+    const currentCount = count || 0;
+    const maxStudents = teacher.max_students || 3;
+    const isFree = teacher.subscription_status === 'free' || !teacher.subscription_status;
+
+    return {
+        currentCount,
+        maxStudents,
+        canAddMore: currentCount < maxStudents,
+        shouldShowUpgrade: isFree && currentCount >= maxStudents
+    };
+}
+
+// 12. SEND AUDIO FEEDBACK
+export async function sendAudioFeedback(formData: FormData) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { error: "Not logged in" };
+
+    const artistId = formData.get('artistId') as string;
+    const audioBlob = formData.get('audio') as File;
+
+    if (!audioBlob) return { error: "No audio provided" };
+
+    // Verify teacher owns this student
+    const { data: artist } = await supabase
+        .from('artists')
+        .select('teacher_id')
+        .eq('id', artistId)
+        .single();
+
+    if (!artist || artist.teacher_id !== user.id) {
+        return { error: "Not authorized" };
+    }
+
+    // Upload audio to storage
+    const fileName = `feedback/${artistId}/${Date.now()}.webm`;
+    const { error: uploadError } = await supabase.storage
+        .from('audio-tracks')
+        .upload(fileName, audioBlob, { upsert: true });
+
+    if (uploadError) return { error: "Upload failed: " + uploadError.message };
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+        .from('audio-tracks')
+        .getPublicUrl(fileName);
+
+    // Update artist with audio feedback URL
+    const { error: dbError } = await supabase
+        .from('artists')
+        .update({ audio_feedback_url: urlData.publicUrl })
+        .eq('id', artistId);
+
+    if (dbError) return { error: dbError.message };
+
+    revalidatePath('/studio/dashboard');
+    return { success: true, url: urlData.publicUrl };
 }
