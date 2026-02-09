@@ -151,15 +151,14 @@ export default function StudentsPage() {
         throw new Error("Auth Session Missing. Auth Error: " + (authError?.message || "User is null"));
       }
 
-      // 3. FETCH PROFILE BY ID
+      // 3. FETCH PROFILE BY ID (with teacher info)
       const { data: artist, error: fetchError } = await supabase
         .from('artists')
-        .select(`*`) // Remove the teacher join completely
+        .select(`*, teachers:teacher_id(username)`)
         .eq('id', user.id)
         .maybeSingle();
 
       if (fetchError) {
-        // 🚨 THIS IS THE INFO I NEED 🚨
         throw new Error(`SUPABASE FETCH ERROR: ${fetchError.message} (Code: ${fetchError.code})`);
       }
 
@@ -170,10 +169,13 @@ export default function StudentsPage() {
       setArtistId(artist.id);
       setIsVerified(true);
 
+      // Extract teacher username from joined data
+      const teacherUsername = (artist.teachers as { username: string } | null)?.username || '';
+
       setCreds({
         ...creds,
         fullName: artist.full_name,
-        teacherSlug: artist.teachers?.username || ''
+        teacherSlug: teacherUsername
       });
 
       setFormData({
@@ -420,12 +422,28 @@ export default function StudentsPage() {
                       </div>
                     </div>
 
+                    {/* Teacher Code - Locked when editing, required for signup */}
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Teacher Code (Optional)</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">
+                        Teacher Code {mode === 'signup' ? '(Required)' : '(Locked)'}
+                      </label>
                       <div className="relative">
                         <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-                        <input value={creds.teacherSlug} onChange={(e) => setCreds({ ...creds, teacherSlug: e.target.value })} placeholder="Enter Teacher's Slug" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-purple-500 transition-all" />
+                        <input
+                          value={creds.teacherSlug}
+                          onChange={(e) => setCreds({ ...creds, teacherSlug: e.target.value })}
+                          placeholder="Enter Teacher's Slug"
+                          disabled={mode === 'login'}
+                          required={mode === 'signup'}
+                          className={`w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-purple-500 transition-all ${mode === 'login' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        />
+                        {mode === 'login' && creds.teacherSlug && (
+                          <Lock className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400" size={14} />
+                        )}
                       </div>
+                      {mode === 'login' && (
+                        <p className="text-[10px] text-zinc-500 pl-4">Teacher assignment cannot be changed.</p>
+                      )}
                     </div>
                   </div>
 

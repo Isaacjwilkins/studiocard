@@ -1,5 +1,6 @@
 import { Heart, Eye, Share2, Lock, Bell, Smartphone, Play, Download, Star, Users, Music } from 'lucide-react';
 import Link from 'next/link';
+import AboutMeSection from "@/components/AboutMeSection";
 
 export const metadata = {
   title: 'For Parents | Studio.Card',
@@ -268,6 +269,9 @@ export default function ParentsPage() {
           </div>
         </div>
       </section>
+
+      {/* About Me Section */}
+      <AboutMeSection />
 
     </main>
   );

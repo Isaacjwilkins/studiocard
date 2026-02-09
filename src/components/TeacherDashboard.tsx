@@ -5,10 +5,11 @@ import { supabase } from "@/lib/supabase";
 import {
     Music, Search, Save, Loader2, Play, Pause,
     ChevronDown, ChevronUp, Contact, Download,
-    Settings, X, Sparkles, Lock as LockIcon, Camera, Upload
+    Settings, X, Sparkles, Lock as LockIcon, Camera, Upload, Mic
 } from 'lucide-react';
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import AudioFeedbackRecorder from "@/components/AudioFeedbackRecorder";
 
 // --- CONFETTI COMPONENT (Internal) ---
 function Confetti({ name, onClose }: { name: string, onClose: () => void }) {
@@ -161,10 +162,14 @@ function StudentRow({ student, tracks }: any) {
     const [isUploadingImage, setIsUploadingImage] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Layout State (Fixed Hydration Issue)
+    // Audio Feedback State
+    const [showAudioRecorder, setShowAudioRecorder] = useState(false);
+    const [audioFeedbackUrl, setAudioFeedbackUrl] = useState(student.audio_feedback_url || "");
+
+    // Layout State
     const [isExpanded, setIsExpanded] = useState(false);
-    const [isDesktop, setIsDesktop] = useState(false); // 👈 Start false (matching server)
     const [showContact, setShowContact] = useState(false);
+    const rowRef = useRef<HTMLDivElement>(null);
 
     // Audio State
     const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
@@ -174,15 +179,22 @@ function StudentRow({ student, tracks }: any) {
     const [playbackRate, setPlaybackRate] = useState(1);
     const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({});
 
-    // 1. FIXED HYDRATION: Check window width ONLY on client mount
-    useEffect(() => {
-        setIsDesktop(window.innerWidth >= 1024);
+    // Get last recording date
+    const lastRecording = tracks.length > 0
+        ? new Date(tracks[0].created_at).toLocaleDateString()
+        : null;
 
-        // Optional: Add resize listener
-        const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    // Check for hash anchor on mount - expand and scroll if this student is targeted
+    useEffect(() => {
+        const hash = window.location.hash;
+        if (hash === `#student-${student.id}`) {
+            setIsExpanded(true);
+            // Scroll into view after a brief delay for DOM to update
+            setTimeout(() => {
+                rowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+    }, [student.id]);
 
     // --- AUDIO HANDLERS ---
     const toggleSpeed = (e: React.MouseEvent) => {
@@ -307,28 +319,18 @@ function StudentRow({ student, tracks }: any) {
         setTimeout(() => setIsSaving(false), 800);
     };
 
-    // --- PRACTICE DOTS (Placeholder) ---
-    const PracticeDots = () => (
-        <div className="flex gap-1.5 md:gap-2">
-            {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
-                <div key={i} className="flex flex-col items-center gap-1">
-                    <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full ${i % 3 === 0 ? 'bg-green-500' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
-                    <span className="text-[8px] font-bold text-zinc-300 dark:text-zinc-600 hidden md:block">{day}</span>
-                </div>
-            ))}
-        </div>
-    );
-
     return (
         <motion.div
+            ref={rowRef}
+            id={`student-${student.id}`}
             layout
             initial={false}
-            className="rounded-[2rem] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 shadow-lg overflow-hidden"
+            className="rounded-[2rem] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 shadow-lg overflow-hidden scroll-mt-24"
         >
             {/* HEADER */}
             <div
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="p-5 md:p-6 cursor-pointer lg:cursor-default flex items-center justify-between group"
+                className="p-5 md:p-6 cursor-pointer flex items-center justify-between group hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors"
             >
                 <div className="flex items-center gap-4 md:gap-6 flex-1 min-w-0">
                     {/* Profile Image with Upload */}
@@ -365,24 +367,30 @@ function StudentRow({ student, tracks }: any) {
                         </button>
                     </div>
 
-                    <div className="flex-1 min-w-0 grid md:grid-cols-[1.5fr_1fr] gap-4 items-center">
-                        <div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3">
                             <h3 className="text-lg md:text-xl font-black tracking-tight truncate">{student.full_name}</h3>
+                            {tracks.length > 0 && (
+                                <span className="hidden md:inline-flex px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[10px] font-bold text-zinc-500">
+                                    {tracks.length} recordings
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-3 mt-0.5">
                             <Link href={`/${student.slug}`} onClick={(e) => e.stopPropagation()} className="text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-purple-500 transition-colors">
                                 @{student.slug}
                             </Link>
-                        </div>
-
-                        {/* Practice Circles Placeholder */}
-                        <div className="hidden md:flex items-center">
-                            <PracticeDots />
+                            {lastRecording && (
+                                <span className="text-[10px] text-zinc-400">
+                                    • Last: {lastRecording}
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
 
                 <div className="pl-4 flex items-center gap-4">
-                    <div className="md:hidden"><PracticeDots /></div>
-                    <div className="lg:hidden p-2 rounded-full bg-zinc-50 dark:bg-black/40 text-zinc-400">
+                    <div className="p-2 rounded-full bg-zinc-50 dark:bg-black/40 text-zinc-400">
                         {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                     </div>
                 </div>
@@ -390,13 +398,12 @@ function StudentRow({ student, tracks }: any) {
 
             {/* EXPANDABLE BODY */}
             <AnimatePresence initial={false}>
-                {/* 3. FIXED HYDRATION: Use isDesktop state instead of window.innerWidth */}
-                {(isExpanded || isDesktop) && (
+                {isExpanded && (
                     <motion.div
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden lg:!h-auto lg:!opacity-100"
+                        className="overflow-hidden"
                     >
                         <div className="px-5 pb-8 md:px-8 md:pb-8 grid lg:grid-cols-12 gap-8 border-t border-zinc-100 dark:border-white/5 pt-8">
 
@@ -557,21 +564,51 @@ function StudentRow({ student, tracks }: any) {
                                         />
                                     </div>
                                 </div>
-                                <button
-                                    onClick={handleUpdate}
-                                    disabled={isSaving}
-                                    className="w-full py-5 rounded-2xl bg-amber-500 text-black font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 
-             hover:brightness-105 hover:scale-[1.02] transition-all
-             shadow-xl shadow-purple-500/10 shadow-amber-500/20
-             ring-1 ring-zinc-300 dark:ring-zinc-700"
-                                >
-                                    {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} Save All Changes
-                                </button>
+                                {/* Voice Note Button */}
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => setShowAudioRecorder(true)}
+                                        className="flex-1 py-4 rounded-2xl bg-purple-500 text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-purple-600 transition-colors"
+                                    >
+                                        <Mic size={16} /> {audioFeedbackUrl ? 'Update Voice Note' : 'Send Voice Note'}
+                                    </button>
+                                    <button
+                                        onClick={handleUpdate}
+                                        disabled={isSaving}
+                                        className="flex-1 py-4 rounded-2xl bg-amber-500 text-black font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2
+                                            hover:brightness-105 hover:scale-[1.02] transition-all
+                                            shadow-xl shadow-purple-500/10 shadow-amber-500/20
+                                            ring-1 ring-zinc-300 dark:ring-zinc-700"
+                                    >
+                                        {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} Save All
+                                    </button>
+                                </div>
+
+                                {/* Current Voice Note Indicator */}
+                                {audioFeedbackUrl && (
+                                    <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/30 text-center">
+                                        <p className="text-xs font-bold text-purple-700 dark:text-purple-300 flex items-center justify-center gap-2">
+                                            <Mic size={12} /> Voice note sent to student's card
+                                        </p>
+                                    </div>
+                                )}
 
                             </div>
 
                         </div>
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Audio Feedback Recorder Modal */}
+            <AnimatePresence>
+                {showAudioRecorder && (
+                    <AudioFeedbackRecorder
+                        artistId={student.id}
+                        artistName={student.full_name}
+                        onClose={() => setShowAudioRecorder(false)}
+                        onSuccess={(url) => setAudioFeedbackUrl(url)}
+                    />
                 )}
             </AnimatePresence>
         </motion.div>

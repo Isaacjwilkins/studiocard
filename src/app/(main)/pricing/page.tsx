@@ -1,8 +1,45 @@
 "use client";
-import { Check, Sparkles, ArrowRight, HelpCircle, MessageSquare } from 'lucide-react';
+
+import { useState } from "react";
+import { Check, Sparkles, ArrowRight, HelpCircle, MessageSquare, Loader2 } from 'lucide-react';
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function PricingPage() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handlePurchase = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // If not authenticated or not a teacher, redirect to studio login
+        if (response.status === 401 || response.status === 404) {
+          router.push("/studio?redirect=upgrade");
+          return;
+        }
+        throw new Error(data.error || "Failed to start checkout");
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+      setIsLoading(false);
+    }
+  };
+
   return (
     <main className="min-h-screen pt-32 pb-20 px-6">
 
@@ -18,6 +55,13 @@ export default function PricingPage() {
           Start free with 3 students. Upgrade anytime for unlimited.
         </p>
       </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="max-w-md mx-auto mb-8 p-4 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-center">
+          {error}
+        </div>
+      )}
 
       {/* PRICING CARDS */}
       <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-8 mb-24 items-stretch">
@@ -101,13 +145,23 @@ export default function PricingPage() {
             ))}
           </ul>
 
-          {/* CTA */}
-          <Link
-            href="/studio"
-            className="w-full py-4 rounded-xl bg-white text-indigo-700 hover:bg-white/90 font-black text-xs uppercase tracking-[0.2em] transition-all text-center flex items-center justify-center gap-2 shadow-lg"
+          {/* CTA - Now triggers checkout */}
+          <button
+            onClick={handlePurchase}
+            disabled={isLoading}
+            className="w-full py-4 rounded-xl bg-white text-indigo-700 hover:bg-white/90 font-black text-xs uppercase tracking-[0.2em] transition-all text-center flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Purchase <Sparkles size={14} />
-          </Link>
+            {isLoading ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                Loading...
+              </>
+            ) : (
+              <>
+                Purchase <Sparkles size={14} />
+              </>
+            )}
+          </button>
         </div>
 
         {/* 3. INSTITUTIONAL */}

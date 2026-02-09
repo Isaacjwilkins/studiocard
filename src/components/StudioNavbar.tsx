@@ -6,16 +6,17 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { LogOut, Sun, Moon, LayoutGrid, Users, Plus, User } from "lucide-react";
-import { supabase } from "@/lib/supabase"; 
+import { createClient } from "@/utils/supabase/client"; 
 
 export default function StudioNavbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  
+  const supabase = createClient();
+
   const [isOpen, setIsOpen] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
-  
+
   const isLoginPage = pathname === "/studio";
 
   // --- SCROLL LOGIC ---
@@ -40,14 +41,59 @@ export default function StudioNavbar() {
   }, [lastScrollY, isOpen]);
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase.from("teachers").select("username").eq("id", user.id).single();
-        if (data) setUsername(data.username);
+    const fetchTeacherUsername = async () => {
+      try {
+        // Get auth session
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session?.user) {
+          // Try getUser as fallback
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+
+          const { data } = await supabase
+            .from("teachers")
+            .select("username")
+            .eq("id", user.id)
+            .single();
+
+          if (data?.username) setUsername(data.username);
+          return;
+        }
+
+        // Fetch teacher username from database
+        const { data, error } = await supabase
+          .from("teachers")
+          .select("username")
+          .eq("id", session.user.id)
+          .single();
+
+        if (data?.username) {
+          setUsername(data.username);
+        }
+      } catch (err) {
+        console.error("Failed to fetch teacher username:", err);
       }
     };
-    fetchUser();
+
+    fetchTeacherUsername();
+
+    // Also listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        const { data } = await supabase
+          .from("teachers")
+          .select("username")
+          .eq("id", session.user.id)
+          .single();
+
+        if (data?.username) setUsername(data.username);
+      } else if (event === 'SIGNED_OUT') {
+        setUsername(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleLogout = async () => {

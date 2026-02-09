@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { updateStudioSettings } from '@/app/actions';
-import { 
-  User, Mail, Lock, Sparkles, CreditCard, 
-  Users, Bell, AlertCircle, CheckCircle2, Loader2, HelpCircle
+import {
+  User, Mail, Lock, Sparkles, CreditCard,
+  Users, Bell, AlertCircle, CheckCircle2, Loader2, HelpCircle, Check, ArrowRight
 } from "lucide-react";
 
 interface AccountFormProps {
@@ -14,7 +15,9 @@ interface AccountFormProps {
 }
 
 export default function AccountForm({ teacher, studentCount, authEmail }: AccountFormProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   // Form State
@@ -24,11 +27,36 @@ export default function AccountForm({ teacher, studentCount, authEmail }: Accoun
     password: '', // Empty by default
   });
 
+  // Subscription State
+  const isStudioPlan = teacher.subscription_status === 'active' || teacher.subscription_tier === 'studio';
+  const currentTier = isStudioPlan ? 'Studio' : 'Free';
+
   // Derived State
-  const maxStudents = teacher.max_students || 5;
+  const maxStudents = teacher.max_students || 3;
   const usagePercent = Math.min((studentCount / maxStudents) * 100, 100);
-  const isNearLimit = usagePercent >= 80;
+  const isNearLimit = !isStudioPlan && usagePercent >= 80;
   const memberSince = new Date(teacher.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  // Handle upgrade click
+  const handleUpgrade = async () => {
+    setUpgradeLoading(true);
+    try {
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Failed to start checkout' });
+        setUpgradeLoading(false);
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Something went wrong' });
+      setUpgradeLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,55 +94,98 @@ export default function AccountForm({ teacher, studentCount, authEmail }: Accoun
 
       <div className="space-y-8">
 
-        {/* 1. SUBSCRIPTION CARD (The Money Maker) */}
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-8 rounded-[2rem] shadow-sm relative overflow-hidden">
+        {/* 1. SUBSCRIPTION CARD */}
+        <div className={`p-8 rounded-[2rem] shadow-sm relative overflow-hidden ${
+          isStudioPlan
+            ? 'bg-gradient-to-br from-indigo-600 to-purple-700 text-white'
+            : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800'
+        }`}>
           {/* Background Glow */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+          <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl pointer-events-none ${
+            isStudioPlan ? 'bg-white/10' : 'bg-purple-500/5'
+          }`} />
 
           <div className="flex items-start justify-between mb-6 relative z-10">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-bold text-[10px] uppercase tracking-widest mb-2 border border-purple-200 dark:border-purple-800">
-                <Sparkles size={12} /> {teacher.subscription_tier} Plan
+              <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full font-bold text-[10px] uppercase tracking-widest mb-2 ${
+                isStudioPlan
+                  ? 'bg-white/20 text-white border border-white/30'
+                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700'
+              }`}>
+                {isStudioPlan ? <Sparkles size={12} /> : <Users size={12} />}
+                {currentTier} Plan
               </div>
-              <h3 className="text-xl font-bold">Student Capacity</h3>
+              <h3 className="text-xl font-bold">
+                {isStudioPlan ? 'Unlimited Students' : 'Student Capacity'}
+              </h3>
             </div>
-            
-            {/* Upgrade Button (Only if not Enterprise) */}
-            {teacher.subscription_tier !== 'enterprise' && (
-              <a 
-                href="/checkout"
-                className="group relative inline-flex items-center gap-2 px-6 py-2.5 rounded-full shadow-sm shadow-amber-500/20 hover:scale-105 hover:shadow-amber-500/40 transition-all duration-300 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-500 text-black font-bold text-xs uppercase tracking-widest"
-                >
-                Upgrade <CreditCard size={14} />
-              </a>
+
+            {/* Upgrade Button (Only for free tier) */}
+            {!isStudioPlan && (
+              <button
+                onClick={handleUpgrade}
+                disabled={upgradeLoading}
+                className="group relative inline-flex items-center gap-2 px-6 py-2.5 rounded-full shadow-sm shadow-amber-500/20 hover:scale-105 hover:shadow-amber-500/40 transition-all duration-300 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-500 text-black font-bold text-xs uppercase tracking-widest disabled:opacity-50"
+              >
+                {upgradeLoading ? (
+                  <><Loader2 size={14} className="animate-spin" /> Loading...</>
+                ) : (
+                  <>Upgrade <ArrowRight size={14} /></>
+                )}
+              </button>
+            )}
+
+            {/* Active badge for Studio Plan */}
+            {isStudioPlan && (
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 text-white font-bold text-xs uppercase tracking-widest">
+                <Check size={14} /> Active
+              </div>
             )}
           </div>
 
-          {/* Progress Bar */}
-          <div className="space-y-3 relative z-10">
-            <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
-              <span className={isNearLimit ? "text-red-500" : "text-zinc-500"}>
-                {studentCount} / {maxStudents} Students Used
-              </span>
-              <span className="text-zinc-400">
-                {Math.round(usagePercent)}%
-              </span>
-            </div>
-            <div className="h-3 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-              <div 
-                className={`h-full rounded-full transition-all duration-1000 ${isNearLimit ? 'bg-red-500' : 'bg-zinc-900 dark:bg-white'}`} 
-                style={{ width: `${usagePercent}%` }} 
-              />
-            </div>
-            {isNearLimit && (
-              <p className="text-xs text-red-500 font-bold flex items-center gap-2 animate-pulse">
-                <AlertCircle size={12} /> You are reaching your limit. Upgrade to add more students.
+          {/* Progress Bar (Only for free tier) */}
+          {!isStudioPlan && (
+            <div className="space-y-3 relative z-10">
+              <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
+                <span className={isNearLimit ? "text-red-500" : "text-zinc-500"}>
+                  {studentCount} / {maxStudents} Students Used
+                </span>
+                <span className="text-zinc-400">
+                  {Math.round(usagePercent)}%
+                </span>
+              </div>
+              <div className="h-3 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-1000 ${isNearLimit ? 'bg-red-500' : 'bg-zinc-900 dark:bg-white'}`}
+                  style={{ width: `${usagePercent}%` }}
+                />
+              </div>
+              {isNearLimit && (
+                <p className="text-xs text-red-500 font-bold flex items-center gap-2 animate-pulse">
+                  <AlertCircle size={12} /> You are reaching your limit. Upgrade to add more students.
+                </p>
+              )}
+              <p className="text-[10px] text-zinc-400">
+                Upgrade to Studio Plan ($29/mo) for unlimited students.
               </p>
-            )}
-            <p className="text-[10px] text-zinc-400">
-              *Additional students are billed at $5/month per 5-student block.
-            </p>
-          </div>
+            </div>
+          )}
+
+          {/* Studio Plan Benefits */}
+          {isStudioPlan && (
+            <div className="space-y-2 relative z-10">
+              <p className="text-white/80 text-sm">
+                You have <span className="font-bold">{studentCount} students</span> in your studio.
+              </p>
+              <div className="flex flex-wrap gap-2 mt-4">
+                {['Unlimited Students', 'Full Inbox', 'Voice Feedback', 'Priority Support'].map((benefit) => (
+                  <span key={benefit} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white/10 text-white/90 text-xs font-medium">
+                    <Check size={10} /> {benefit}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 2. PROFILE FORM */}

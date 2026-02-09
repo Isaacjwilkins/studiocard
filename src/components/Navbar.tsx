@@ -2,17 +2,22 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sun, Moon, Menu, X, ChevronDown } from "lucide-react";
+import { Sun, Moon, Menu, X, ChevronDown, ArrowRight } from "lucide-react";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isDesktopMenuOpen, setIsDesktopMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Slug input state
+  const [slug, setSlug] = useState("");
+  const [isSlugFocused, setIsSlugFocused] = useState(false);
 
   // --- SCROLL LOGIC ---
   const [isVisible, setIsVisible] = useState(true);
@@ -45,6 +50,15 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleSlugSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!slug.trim()) return;
+    const cleanSlug = slug.trim().toLowerCase();
+    setSlug("");
+    setIsMobileOpen(false);
+    router.push(`/${cleanSlug}`);
+  };
+
   const mainLinks = [
     { name: "Parents", href: "/parents" },
     { name: "Teachers", href: "/teachers" },
@@ -70,12 +84,39 @@ export default function Navbar() {
       <div className="w-full border-b border-white/10 dark:border-white/5 bg-white/60 dark:bg-black/80 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
 
-          {/* LOGO */}
-          <a href="/" className="hover:opacity-70 transition-opacity">
-            <h1 className="text-xl md:text-2xl font-black tracking-tighter text-foreground">
-              studio<span className="text-red-500/80 dark:text-red-400">.</span>card
-            </h1>
-          </a>
+          {/* LEFT: LOGO + SLUG INPUT (Desktop) */}
+          <div className="flex items-center gap-4">
+            <a href="/" className="hover:opacity-70 transition-opacity">
+              <h1 className="text-xl md:text-2xl font-black tracking-tighter text-foreground">
+                studio<span className="text-red-500/80 dark:text-red-400">.</span>card
+              </h1>
+            </a>
+
+            {/* Desktop Slug Input */}
+            <form onSubmit={handleSlugSubmit} className="hidden lg:flex items-center">
+              <div className="flex items-center h-8 rounded-lg bg-zinc-100/80 dark:bg-white/5 border border-zinc-200/50 dark:border-white/10 overflow-hidden transition-all duration-200"
+                style={{ width: isSlugFocused ? '220px' : '140px' }}
+              >
+                <span className="pl-2 text-[10px] font-medium text-zinc-400 whitespace-nowrap">/</span>
+                <input
+                  type="text"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value.toLowerCase())}
+                  onFocus={() => setIsSlugFocused(true)}
+                  onBlur={() => setIsSlugFocused(false)}
+                  placeholder="go to card..."
+                  className="w-full h-full px-1 text-xs font-medium bg-transparent outline-none text-foreground placeholder:text-zinc-400"
+                />
+                <button
+                  type="submit"
+                  disabled={!slug.trim()}
+                  className="h-full px-2 text-zinc-400 hover:text-foreground disabled:opacity-30 transition-colors"
+                >
+                  <ArrowRight size={12} />
+                </button>
+              </div>
+            </form>
+          </div>
 
           {/* DESKTOP NAV */}
           <div className="hidden md:flex items-center gap-8">
@@ -187,6 +228,34 @@ export default function Navbar() {
           >
             <div className="flex flex-col h-full pt-24 px-8 overflow-y-auto pb-10">
               <div className="flex flex-col gap-6">
+
+                {/* Mobile Slug Input - Prominent at top */}
+                <div className="mb-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">
+                    Go to a card
+                  </p>
+                  <form onSubmit={handleSlugSubmit} className="flex items-center gap-2">
+                    <div className="flex-1 flex items-center h-12 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+                      <span className="pl-4 text-sm font-medium text-zinc-400">studiocard.live/</span>
+                      <input
+                        type="text"
+                        value={slug}
+                        onChange={(e) => setSlug(e.target.value.toLowerCase())}
+                        placeholder="your-card"
+                        className="flex-1 h-full px-1 text-sm font-bold bg-transparent outline-none text-foreground placeholder:text-zinc-400"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={!slug.trim()}
+                      className="h-12 px-4 rounded-xl bg-foreground text-background font-bold text-sm disabled:opacity-30 transition-all"
+                    >
+                      <ArrowRight size={18} />
+                    </button>
+                  </form>
+                </div>
+
+                <div className="h-px w-full bg-zinc-200 dark:bg-zinc-800" />
 
                 <a href="/" onClick={() => setIsMobileOpen(false)} className={`text-4xl font-black tracking-tighter ${pathname === "/" ? "text-foreground" : "text-zinc-400"}`}>
                   Home

@@ -317,7 +317,7 @@ export async function getTeacherFeed() {
     // Get all student IDs for this teacher
     const { data: students } = await supabase
         .from('artists')
-        .select('id, full_name, profile_image_url')
+        .select('id, full_name, profile_image_url, slug')
         .eq('teacher_id', user.id);
 
     if (!students || students.length === 0) {
@@ -342,7 +342,8 @@ export async function getTeacherFeed() {
         return {
             ...track,
             artist_name: artist?.full_name || 'Unknown',
-            artist_image: artist?.profile_image_url || null
+            artist_image: artist?.profile_image_url || null,
+            artist_slug: artist?.slug || null
         };
     });
 
