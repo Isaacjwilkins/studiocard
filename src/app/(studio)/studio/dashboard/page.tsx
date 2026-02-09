@@ -25,10 +25,18 @@ export default async function StudioHome() {
     redirect("/studio?error=not_a_teacher");
   }
 
+  // DEBUG: Log teacher subscription data
+  console.log('Teacher subscription data:', {
+    id: teacher.id,
+    subscription_status: teacher.subscription_status,
+    subscription_tier: teacher.subscription_tier,
+    max_students: teacher.max_students
+  });
+
   // 3. Fetch Students (For capacity & dropdowns)
   const { data: students } = await supabase
     .from("artists")
-    .select("id, full_name, profile_image_url")
+    .select("id, full_name, profile_image_url, slug")
     .eq("teacher_id", teacher.id);
 
   // 4. Fetch Schedule
@@ -48,6 +56,7 @@ export default async function StudioHome() {
     artist_id: string;
     artist_name: string;
     artist_image: string | null;
+    artist_slug: string | null;
   }[] = [];
   let unreadCount = 0;
 
@@ -66,7 +75,8 @@ export default async function StudioHome() {
           ...track,
           is_read: track.is_read ?? false,
           artist_name: artist?.full_name || "Unknown",
-          artist_image: artist?.profile_image_url || null
+          artist_image: artist?.profile_image_url || null,
+          artist_slug: artist?.slug || null
         };
       });
       unreadCount = feedTracks.filter(t => !t.is_read).length;
