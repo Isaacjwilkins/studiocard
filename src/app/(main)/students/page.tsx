@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/utils/supabase/client';
 import { signupStudent, loginStudent } from '@/app/actions';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -41,6 +41,9 @@ const base64ToBlob = async (url: string) => {
 };
 
 export default function StudentsPage() {
+  // --- SUPABASE CLIENT ---
+  const supabase = createClient();
+
   // --- STATE ---
   const [mode, setMode] = useState<'login' | 'signup'>('signup');
   const [loading, setLoading] = useState(false);
@@ -375,7 +378,7 @@ export default function StudentsPage() {
                       <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Your URL (Slug)</label>
                       <div className="relative">
                         <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-                        <input required value={creds.slug} onChange={(e) => setCreds({ ...creds, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })} placeholder="leo-piano" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all lowercase" />
+                        <input required value={creds.slug} onChange={(e) => setCreds({ ...creds, slug: e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') })} placeholder="leo-piano" className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all lowercase" />
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -418,7 +421,7 @@ export default function StudentsPage() {
                       <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-4">Your Custom URL (Slug)</label>
                       <div className="relative">
                         <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-                        <input required disabled={mode === 'login'} value={creds.slug} onChange={(e) => setCreds({ ...creds, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })} placeholder="leo-piano" className={`w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all ${mode === 'login' ? 'opacity-50' : ''}`} />
+                        <input required disabled={mode === 'login'} value={creds.slug} onChange={(e) => setCreds({ ...creds, slug: e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') })} placeholder="leo-piano" className={`w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all lowercase ${mode === 'login' ? 'opacity-50' : ''}`} />
                       </div>
                     </div>
 
@@ -431,11 +434,11 @@ export default function StudentsPage() {
                         <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
                         <input
                           value={creds.teacherSlug}
-                          onChange={(e) => setCreds({ ...creds, teacherSlug: e.target.value })}
+                          onChange={(e) => setCreds({ ...creds, teacherSlug: e.target.value.toLowerCase().replace(/\s+/g, '') })}
                           placeholder="Enter Teacher's Slug"
                           disabled={mode === 'login'}
                           required={mode === 'signup'}
-                          className={`w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-purple-500 transition-all ${mode === 'login' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          className={`w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:ring-2 focus:ring-purple-500 transition-all lowercase ${mode === 'login' ? 'opacity-50 cursor-not-allowed' : ''}`}
                         />
                         {mode === 'login' && creds.teacherSlug && (
                           <Lock className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400" size={14} />
