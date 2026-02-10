@@ -43,7 +43,7 @@ export default function AboutMeSection() {
               </p>
               <div className="pt-2">
                 <a
-                  href="https://isaacwilkins.com/music"
+                  href="https://studiocard.live/isaac"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-zinc-500 hover:text-foreground transition-colors border-b border-transparent hover:border-foreground pb-0.5"
