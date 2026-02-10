@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowRight, Play, Heart, Share2, Users, Smartphone, Music, Pause } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Home() {
   return (
@@ -38,7 +39,7 @@ export default function Home() {
           <p className="text-xl text-zinc-600 dark:text-zinc-400 leading-relaxed mb-8 max-w-xl mx-auto lg:mx-0">
             Practice happens in the dark. Nobody hears the progress until the recital.
             <span className="block mt-2 font-medium text-foreground">
-              Record your wins. Share a private link. Get high-fives from family.
+              Record your wins. Share your private link. Get high-fives from family.
             </span>
           </p>
 
@@ -158,8 +159,8 @@ export default function Home() {
       </section>
 
       {/* 4. SOCIAL PROOF / EMOTIONAL */}
-      <section className="w-full max-w-5xl px-6 mb-24">
-        <div className="grid md:grid-cols-2 gap-8 items-center">
+      <section className="w-full max-w-5xl px-6 mb-32 py-8">
+        <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
             <h2 className="text-3xl md:text-4xl font-black tracking-tight">
               99% of music happens in the practice room.
@@ -181,19 +182,8 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Visual: Grandma concept */}
-          <div className="relative">
-            <div className="aspect-square rounded-[2rem] bg-gradient-to-br from-orange-100 to-pink-100 dark:from-orange-900/20 dark:to-pink-900/20 border border-orange-200/50 dark:border-orange-800/30 p-8 flex flex-col items-center justify-center text-center">
-              <div className="text-6xl mb-4">👵📱</div>
-              <p className="text-xl font-bold text-foreground mb-2">"Is that my grandbaby?"</p>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Grandma in Florida, listening to your Für Elise on her morning coffee break.
-              </p>
-              <div className="mt-4 px-4 py-2 rounded-full bg-white dark:bg-zinc-800 text-xs font-mono text-zinc-500">
-                studiocard.live/eliza
-              </div>
-            </div>
-          </div>
+          {/* Visual: Rotating Card Stack */}
+          <RotatingCardStack />
         </div>
       </section>
 
@@ -381,6 +371,172 @@ function SlugNavigator() {
           studiocard.live/<span className="font-mono text-foreground">{slug || 'your-card'}</span>
         </div>
       </form>
+    </div>
+  );
+}
+
+// --- ROTATING CARD STACK ---
+function RotatingCardStack() {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const students = [
+    {
+      name: "Eliza W.",
+      initials: "EW",
+      instrument: "Piano",
+      teacher: "Ms. Johnson",
+      gradient: "from-orange-400 to-pink-500",
+      bgGradient: "from-orange-50 to-pink-50 dark:from-orange-900/20 dark:to-pink-900/20",
+      track: "Für Elise",
+      slug: "eliza"
+    },
+    {
+      name: "Marcus T.",
+      initials: "MT",
+      instrument: "Violin",
+      teacher: "Mr. Chen",
+      gradient: "from-blue-400 to-indigo-500",
+      bgGradient: "from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20",
+      track: "Concerto No. 5",
+      slug: "marcus"
+    },
+    {
+      name: "Sofia R.",
+      initials: "SR",
+      instrument: "Voice",
+      teacher: "Ms. Davis",
+      gradient: "from-purple-400 to-pink-500",
+      bgGradient: "from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20",
+      track: "Ave Maria",
+      slug: "sofia"
+    },
+    {
+      name: "Jake L.",
+      initials: "JL",
+      instrument: "Guitar",
+      teacher: "Mr. Rodriguez",
+      gradient: "from-emerald-400 to-teal-500",
+      bgGradient: "from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20",
+      track: "Classical Gas",
+      slug: "jake"
+    }
+  ];
+
+  // Auto-rotate every 3 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % students.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [students.length]);
+
+  return (
+    <div className="relative w-full max-w-sm mx-auto h-[420px]">
+      {/* Ambient glow */}
+      <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 via-pink-500/20 to-purple-500/20 rounded-[3rem] blur-3xl opacity-50" />
+
+      {/* Card Stack */}
+      <div className="relative w-full h-full flex items-center justify-center" style={{ perspective: '1200px' }}>
+        <AnimatePresence mode="popLayout">
+          {students.map((student, index) => {
+            const offset = (index - activeIndex + students.length) % students.length;
+            const isActive = offset === 0;
+            const isNext = offset === 1;
+            const isPrev = offset === students.length - 1;
+            const isBehind = offset === 2 || offset === students.length - 2;
+
+            // Only render visible cards
+            if (offset > 2 && offset < students.length - 2) return null;
+
+            return (
+              <motion.div
+                key={student.slug}
+                className="absolute w-72"
+                initial={false}
+                animate={{
+                  rotateY: isActive ? 0 : isNext ? 25 : isPrev ? -25 : isBehind ? (offset === 2 ? 40 : -40) : 0,
+                  scale: isActive ? 1 : isNext || isPrev ? 0.85 : 0.7,
+                  x: isActive ? 0 : isNext ? 80 : isPrev ? -80 : isBehind ? (offset === 2 ? 120 : -120) : 0,
+                  z: isActive ? 100 : isNext || isPrev ? 0 : -100,
+                  opacity: isActive ? 1 : isNext || isPrev ? 0.6 : 0.3,
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 30,
+                }}
+                style={{
+                  zIndex: isActive ? 10 : isNext || isPrev ? 5 : 1,
+                  transformStyle: 'preserve-3d',
+                }}
+                onClick={() => setActiveIndex(index)}
+              >
+                {/* Mini Card */}
+                <div className={`rounded-[1.5rem] overflow-hidden shadow-2xl border border-white/20 bg-gradient-to-br ${student.bgGradient} cursor-pointer hover:scale-[1.02] transition-transform`}>
+                  {/* Card Header */}
+                  <div className="p-5 text-center">
+                    {/* Avatar */}
+                    <div className={`w-16 h-16 mx-auto rounded-full bg-gradient-to-br ${student.gradient} flex items-center justify-center text-white font-black text-xl shadow-lg mb-3`}>
+                      {student.initials}
+                    </div>
+                    <h3 className="font-black text-lg text-foreground">{student.name}</h3>
+                    <p className="text-xs text-zinc-500">{student.instrument} • {student.teacher}</p>
+                  </div>
+
+                  {/* Current Track */}
+                  <div className="px-5 pb-3">
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-white/60 dark:bg-black/20 backdrop-blur-sm">
+                      <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${student.gradient} flex items-center justify-center text-white shrink-0`}>
+                        <Play size={14} className="ml-0.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm truncate text-foreground">{student.track}</p>
+                        <p className="text-[10px] text-zinc-500">Latest recording</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="px-5 pb-4">
+                    <div className="text-center">
+                      <p className="text-[10px] font-mono text-zinc-400">
+                        studiocard.live/{student.slug}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </div>
+
+      {/* Dots indicator */}
+      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
+        {students.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => setActiveIndex(index)}
+            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+              index === activeIndex
+                ? 'bg-foreground w-6'
+                : 'bg-zinc-300 dark:bg-zinc-600 hover:bg-zinc-400'
+            }`}
+          />
+        ))}
+      </div>
+
+      {/* Caption */}
+      <motion.div
+        key={activeIndex}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="absolute -bottom-16 left-0 right-0 text-center"
+      >
+        <p className="text-sm text-zinc-500">
+          "{students[activeIndex].name.split(' ')[0]} just shared their {students[activeIndex].track}"
+        </p>
+      </motion.div>
     </div>
   );
 }

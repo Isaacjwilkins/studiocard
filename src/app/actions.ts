@@ -503,3 +503,61 @@ export async function sendAudioFeedback(formData: FormData) {
     revalidatePath('/studio/dashboard');
     return { success: true, url: urlData.publicUrl };
 }
+
+// INTERNSHIP APPLICATION
+export async function submitInternshipApplication(formData: FormData) {
+    const supabaseAdmin = createAdminClient();
+
+    const fullName = formData.get("fullName") as string;
+    const email = formData.get("email") as string;
+    const linkedinUrl = formData.get("linkedinUrl") as string;
+    const message = formData.get("message") as string;
+    const resumeFile = formData.get("resume") as File | null;
+
+    if (!fullName || !email) {
+        return { error: "Name and email are required." };
+    }
+
+    let resumeUrl: string | null = null;
+
+    // Upload resume if provided
+    if (resumeFile && resumeFile.size > 0) {
+        const fileName = `resumes/${Date.now()}-${resumeFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        const arrayBuffer = await resumeFile.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        const { error: uploadError } = await supabaseAdmin.storage
+            .from('audio-tracks')
+            .upload(fileName, buffer, {
+                contentType: resumeFile.type,
+                upsert: false
+            });
+
+        if (uploadError) {
+            return { error: "Failed to upload resume: " + uploadError.message };
+        }
+
+        const { data: urlData } = supabaseAdmin.storage
+            .from('audio-tracks')
+            .getPublicUrl(fileName);
+
+        resumeUrl = urlData.publicUrl;
+    }
+
+    // Insert application
+    const { error: dbError } = await supabaseAdmin
+        .from('internship_applications')
+        .insert({
+            full_name: fullName,
+            email: email,
+            linkedin_url: linkedinUrl || null,
+            resume_url: resumeUrl,
+            message: message || null
+        });
+
+    if (dbError) {
+        return { error: "Failed to submit application: " + dbError.message };
+    }
+
+    return { success: true };
+}

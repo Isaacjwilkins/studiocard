@@ -27,6 +27,9 @@ export default function Footer() {
             <Link href="/faq" className="hover:text-foreground transition-colors">
               FAQ
             </Link>
+            <Link href="/careers" className="hover:text-foreground transition-colors">
+              Careers
+            </Link>
           </div>
 
           {/* Social Icons */}

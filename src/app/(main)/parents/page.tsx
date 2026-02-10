@@ -1,13 +1,35 @@
 import { Heart, Eye, Share2, Lock, Bell, Smartphone, Play, Download, Star, Users, Music } from 'lucide-react';
 import Link from 'next/link';
 import AboutMeSection from "@/components/AboutMeSection";
+import { createClient } from '@/utils/supabase/server';
+import LiveCardPreview from './LiveCardPreview';
 
 export const metadata = {
   title: 'For Parents | Studio.Card',
   description: 'Stay connected to your child\'s music journey. View practice recordings, see teacher feedback, and celebrate progress together.',
 };
 
-export default function ParentsPage() {
+export default async function ParentsPage() {
+  // Fetch real data for the preview card
+  const supabase = await createClient();
+
+  const { data: artist } = await supabase
+    .from('artists')
+    .select('*')
+    .eq('slug', 'isaac')
+    .single();
+
+  let tracks: any[] = [];
+  if (artist) {
+    const { data } = await supabase
+      .from('tracks')
+      .select('id, title, audio_url, created_at')
+      .eq('artist_id', artist.id)
+      .eq('is_public', true)
+      .order('created_at', { ascending: false })
+      .limit(3);
+    tracks = data || [];
+  }
   return (
     <main className="min-h-screen pt-32 pb-20 px-6">
 
@@ -32,7 +54,7 @@ export default function ParentsPage() {
               Your child&apos;s digital music portfolio
             </h2>
             <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              Think of it like a digital refrigerator door for their music. Every week, your child records their practice and uploads it to their personal Studio Card. You get a link like <span className="font-mono text-pink-500">studiocard.live/emma</span> where you can listen anytime.
+              Think of it like a digital refrigerator door for their music. Every week, your child records their practice and uploads it to their personal Studio Card. You get a link like <span className="font-mono text-pink-500">studiocard.live/isaac</span> where you can listen anytime.
             </p>
             <ul className="space-y-4">
               {[
@@ -50,27 +72,8 @@ export default function ParentsPage() {
               ))}
             </ul>
           </div>
-          <div className="relative">
-            <div className="aspect-[4/5] rounded-[2rem] bg-gradient-to-br from-pink-500 via-rose-500 to-red-500 p-1">
-              <div className="w-full h-full rounded-[1.75rem] bg-zinc-900 flex flex-col items-center justify-center text-white p-8">
-                <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center mb-4">
-                  <Music size={32} />
-                </div>
-                <p className="text-2xl font-black mb-1">Emma&apos;s Card</p>
-                <p className="text-white/60 text-sm mb-6">Piano Student</p>
-                <div className="w-full space-y-3">
-                  <div className="h-12 rounded-xl bg-white/10 flex items-center px-4 gap-3">
-                    <Play size={16} className="text-pink-400" />
-                    <span className="text-sm font-medium">Für Elise - Week 4</span>
-                  </div>
-                  <div className="h-12 rounded-xl bg-white/10 flex items-center px-4 gap-3">
-                    <Play size={16} className="text-pink-400" />
-                    <span className="text-sm font-medium">C Major Scale</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Live Card Preview */}
+          <LiveCardPreview artist={artist} tracks={tracks} />
         </div>
       </section>
 
@@ -87,7 +90,7 @@ export default function ParentsPage() {
             <div className="w-8 h-8 rounded-full bg-pink-100 dark:bg-pink-900/30 text-pink-600 font-black text-sm flex items-center justify-center mx-auto">1</div>
             <h3 className="text-xl font-bold">Get Their Link</h3>
             <p className="text-zinc-500">
-              Ask your child&apos;s music teacher for their Studio Card link. It&apos;ll look something like <span className="font-mono text-pink-500">studiocard.live/emma</span>
+              Ask your child&apos;s music teacher for their Studio Card link. It&apos;ll look something like <span className="font-mono text-pink-500">studiocard.live/isaac</span>
             </p>
           </div>
 

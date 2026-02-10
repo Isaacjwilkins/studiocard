@@ -97,7 +97,7 @@ export default function FAQPage() {
             <p className="text-sm text-zinc-500">View student and teacher options.</p>
           </Link>
 
-          <a href="mailto:support@studiocard.com" className="group p-6 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 hover:border-zinc-400 transition-colors">
+          <a href="mailto:isaacjwilkins@gmail.com" className="group p-6 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 hover:border-zinc-400 transition-colors">
             <div className="mb-4 w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 flex items-center justify-center">
               <Mail size={20} />
             </div>
@@ -105,12 +105,12 @@ export default function FAQPage() {
             <p className="text-sm text-zinc-500">Email us directly for help.</p>
           </a>
 
-          <a href="https://studiocard.live" target="_blank" rel="noopener noreferrer" className="group p-6 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 hover:border-zinc-400 transition-colors">
+          <a href="https://studiocard.live/parents" target="_blank" rel="noopener noreferrer" className="group p-6 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 hover:border-zinc-400 transition-colors">
             <div className="mb-4 w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 flex items-center justify-center">
               <ExternalLink size={20} />
             </div>
-            <h4 className="font-bold mb-1 group-hover:underline">Studio Live</h4>
-            <p className="text-sm text-zinc-500">Visit our live streaming platform.</p>
+            <h4 className="font-bold mb-1 group-hover:underline">Parents</h4>
+            <p className="text-sm text-zinc-500">Learn what your kids will be using</p>
           </a>
 
         </div>
