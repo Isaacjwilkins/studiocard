@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useTheme } from "next-themes";
 
 interface RecitalBackgroundsProps {
   type: string;
@@ -9,6 +10,8 @@ interface RecitalBackgroundsProps {
 
 export default function RecitalBackgrounds({ type, color }: RecitalBackgroundsProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   // Convert hex to RGB
   const hexToRgb = (hex: string) => {
@@ -19,7 +22,7 @@ export default function RecitalBackgrounds({ type, color }: RecitalBackgroundsPr
           g: parseInt(result[2], 16),
           b: parseInt(result[3], 16)
         }
-      : { r: 99, g: 102, b: 241 }; // Default purple
+      : { r: 99, g: 102, b: 241 };
   };
 
   const rgb = hexToRgb(color);
@@ -130,7 +133,7 @@ export default function RecitalBackgrounds({ type, color }: RecitalBackgroundsPr
   if (type === "animated") {
     return (
       <>
-        <div className="fixed inset-0 bg-background -z-30" />
+        <div className="fixed inset-0 bg-white dark:bg-black -z-30" />
         <canvas ref={canvasRef} className="fixed inset-0 -z-20 pointer-events-none" />
       </>
     );
@@ -138,39 +141,53 @@ export default function RecitalBackgrounds({ type, color }: RecitalBackgroundsPr
 
   if (type === "gradient") {
     return (
-      <div
-        className="fixed inset-0 -z-30"
-        style={{
-          background: `linear-gradient(135deg,
-            ${color}10 0%,
-            transparent 50%,
-            ${color}10 100%
-          )`
-        }}
-      >
-        <div className="absolute inset-0 bg-background" style={{ opacity: 0.95 }} />
+      <div className="fixed inset-0 -z-30">
+        {/* Base background */}
+        <div className="absolute inset-0 bg-white dark:bg-black" />
+        {/* Gradient overlay - adjusted for dark mode */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: isDark
+              ? `radial-gradient(ellipse at 30% 20%, ${color}15 0%, transparent 50%),
+                 radial-gradient(ellipse at 70% 80%, ${color}10 0%, transparent 50%)`
+              : `radial-gradient(ellipse at 30% 20%, ${color}20 0%, transparent 50%),
+                 radial-gradient(ellipse at 70% 80%, ${color}15 0%, transparent 50%)`
+          }}
+        />
+        {/* Subtle noise texture for depth */}
+        <div
+          className="absolute inset-0 opacity-[0.015] dark:opacity-[0.03]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`
+          }}
+        />
       </div>
     );
   }
 
   if (type === "pattern") {
     return (
-      <div className="fixed inset-0 -z-30 bg-background">
+      <div className="fixed inset-0 -z-30">
+        {/* Base background */}
+        <div className="absolute inset-0 bg-white dark:bg-black" />
+        {/* Musical note pattern - adjusted opacity for dark mode */}
         <div
-          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
+          className="absolute inset-0"
           style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5 L35 15 L30 25 L25 15 Z M10 25 L15 35 L10 45 L5 35 Z M50 25 L55 35 L50 45 L45 35 Z M30 35 L35 45 L30 55 L25 45 Z' fill='${encodeURIComponent(color)}' fill-opacity='1'/%3E%3C/svg%3E")`,
+            opacity: isDark ? 0.06 : 0.04,
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='${encodeURIComponent(color)}' fill-rule='evenodd'%3E%3Ccircle cx='15' cy='45' r='3'/%3E%3Cpath d='M18 45V25h2v20h-2zm2-20h8v2h-8v-2z'/%3E%3Ccircle cx='45' cy='35' r='3'/%3E%3Cpath d='M48 35V15h2v20h-2zm2-20h6v2h-6v-2z'/%3E%3C/g%3E%3C/svg%3E")`,
             backgroundSize: "60px 60px"
           }}
         />
-        {/* Musical staff lines */}
-        <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.03]">
-          {Array.from({ length: 10 }).map((_, i) => (
+        {/* Subtle horizontal lines like staff lines */}
+        <div className="absolute inset-0" style={{ opacity: isDark ? 0.04 : 0.02 }}>
+          {[15, 30, 45, 60, 75].map((top) => (
             <div
-              key={i}
+              key={top}
               className="absolute left-0 right-0 h-px"
               style={{
-                top: `${10 + i * 10}%`,
+                top: `${top}%`,
                 backgroundColor: color
               }}
             />
@@ -180,13 +197,19 @@ export default function RecitalBackgrounds({ type, color }: RecitalBackgroundsPr
     );
   }
 
-  // Plain background (default)
+  // Original/Plain background (default)
   return (
-    <div
-      className="fixed inset-0 -z-30 bg-background"
-      style={{
-        background: `linear-gradient(180deg, ${color}05 0%, transparent 100%)`
-      }}
-    />
+    <div className="fixed inset-0 -z-30">
+      <div className="absolute inset-0 bg-white dark:bg-black" />
+      {/* Very subtle top gradient with theme color */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: isDark
+            ? `linear-gradient(180deg, ${color}08 0%, transparent 30%)`
+            : `linear-gradient(180deg, ${color}06 0%, transparent 30%)`
+        }}
+      />
+    </div>
   );
 }

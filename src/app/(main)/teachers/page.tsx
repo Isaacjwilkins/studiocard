@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Inbox, Users, Calendar, ShieldCheck, ArrowRight, Sparkles, Check, Clock } from "lucide-react";
+import { Inbox, Users, Calendar, ShieldCheck, ArrowRight, Sparkles, Check, Clock, QrCode, Music, MapPin } from "lucide-react";
 import Image from "next/image";
 import AboutMeSection from "@/components/AboutMeSection";
 
@@ -134,7 +134,172 @@ export default function TeachersPage() {
         </div>
       </div>
 
-      {/* 3. FEATURE GRID (New Features) */}
+      {/* 3. DIGITAL RECITAL SHOWCASE */}
+      <section className="max-w-6xl mx-auto mb-32">
+        <div className="grid md:grid-cols-2 gap-12 items-center bg-gradient-to-br from-purple-50 via-indigo-50 to-violet-50 dark:from-purple-900/10 dark:via-indigo-900/10 dark:to-violet-900/10 backdrop-blur-2xl border border-purple-200/50 dark:border-purple-800/30 rounded-[2.5rem] p-8 md:p-12 shadow-2xl overflow-hidden">
+
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-bold text-xs uppercase tracking-widest">
+              <Sparkles size={12} /> New Feature
+            </div>
+
+            <h2 className="text-3xl md:text-4xl font-black tracking-tight">
+              Digital Recital Programs
+              <br />
+              <span className="text-purple-500">in 60 seconds.</span>
+            </h2>
+
+            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              Create beautiful, shareable concert programs for your recitals and showcases.
+              Attendees scan a QR code and instantly see the full program on their phones.
+            </p>
+
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0 mt-0.5">
+                  <QrCode size={16} className="text-purple-500" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm">QR Code Sharing</h4>
+                  <p className="text-sm text-zinc-500">Print or display the QR code at your venue. No app downloads needed.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0 mt-0.5">
+                  <Music size={16} className="text-purple-500" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm">Full Program Details</h4>
+                  <p className="text-sm text-zinc-500">Student photos, pieces, composers, and estimated start times.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0 mt-0.5">
+                  <Users size={16} className="text-purple-500" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm">Link to Student Cards</h4>
+                  <p className="text-sm text-zinc-500">Attendees can tap to discover each student&apos;s full portfolio.</p>
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/studio"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-full font-bold text-sm transition-colors"
+            >
+              Create Your First Recital <ArrowRight size={16} />
+            </Link>
+          </div>
+
+          {/* RECITAL PROGRAM MOCKUP */}
+          <div className="relative">
+            {/* Phone Frame */}
+            <div className="relative mx-auto w-[280px] md:w-[320px]">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-[3rem] blur-3xl" />
+              <div className="relative bg-white dark:bg-zinc-900 rounded-[2.5rem] border-[8px] border-zinc-800 dark:border-zinc-700 shadow-2xl overflow-hidden">
+                {/* Phone Notch */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-zinc-800 dark:bg-zinc-700 rounded-b-2xl z-10" />
+
+                {/* Program Content */}
+                <div className="pt-8 pb-6 px-5 min-h-[480px] bg-gradient-to-b from-purple-50 to-white dark:from-purple-900/20 dark:to-zinc-900">
+                  {/* Header */}
+                  <div className="text-center mb-6 pt-2">
+                    <h3 className="text-lg font-black tracking-tight">Spring Recital 2026</h3>
+                    <p className="text-xs text-zinc-500">Ms. Smith&apos;s Piano Studio</p>
+                    <div className="flex items-center justify-center gap-2 mt-2 text-[10px] text-zinc-400">
+                      <span className="flex items-center gap-1">
+                        <Calendar size={10} /> May 15, 3:00 PM
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <MapPin size={10} /> Community Hall
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Performers */}
+                  <div className="space-y-2">
+                    {[
+                      { name: "Emily Chen", piece: "Fur Elise", composer: "Beethoven", color: "#6366f1" },
+                      { name: "Jake Thompson", piece: "Minuet in G", composer: "Bach", color: "#8b5cf6" },
+                      { name: "Sarah Kim", piece: "Sonatina Op. 36", composer: "Clementi", color: "#a855f7" },
+                    ].map((performer, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-3 p-3 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-700 shadow-sm"
+                      >
+                        <div
+                          className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                          style={{ backgroundColor: performer.color }}
+                        >
+                          {performer.name.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-sm truncate">{performer.name}</p>
+                          <p className="text-[10px] text-zinc-500 truncate">
+                            {performer.piece} &bull; {performer.composer}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Intermission */}
+                    <div className="py-3 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="h-px w-8 bg-zinc-300 dark:bg-zinc-600" />
+                        <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider">Intermission</span>
+                        <div className="h-px w-8 bg-zinc-300 dark:bg-zinc-600" />
+                      </div>
+                    </div>
+
+                    {[
+                      { name: "Alex Rivera", piece: "Nocturne Op. 9", composer: "Chopin", color: "#ec4899" },
+                    ].map((performer, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-3 p-3 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-700 shadow-sm"
+                      >
+                        <div
+                          className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                          style={{ backgroundColor: performer.color }}
+                        >
+                          {performer.name.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-sm truncate">{performer.name}</p>
+                          <p className="text-[10px] text-zinc-500 truncate">
+                            {performer.piece} &bull; {performer.composer}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Footer */}
+                  <div className="mt-6 text-center">
+                    <p className="text-[10px] text-zinc-400">
+                      Created with <span className="font-bold">studio<span className="text-purple-500">.</span>card</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Floating QR Code Badge */}
+            <div className="absolute -right-4 top-20 bg-white dark:bg-zinc-800 rounded-xl p-3 shadow-xl border border-zinc-200 dark:border-zinc-700 transform rotate-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-lg flex items-center justify-center">
+                <QrCode size={32} className="text-white" />
+              </div>
+              <p className="text-[8px] font-bold text-center mt-1 text-zinc-500">SCAN ME</p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* 4. FEATURE GRID (New Features) */}
       <section className="max-w-5xl mx-auto mb-32">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-black tracking-tight mb-4">
@@ -151,12 +316,12 @@ export default function TeachersPage() {
             <div className="w-14 h-14 rounded-2xl bg-purple-500 text-white flex items-center justify-center mb-4 shadow-lg shadow-purple-500/20">
               <Calendar size={28} />
             </div>
-            <h3 className="text-2xl font-black mb-2">Digital Recitals</h3>
+            <h3 className="text-2xl font-black mb-2">Digital Recital Programs</h3>
             <p className="text-zinc-600 dark:text-zinc-400 mb-4">
-              Create a shareable concert program in one click. Perfect for end-of-year showcases or keeping students engaged over summer break.
+              Create beautiful shareable concert programs with QR codes. Perfect for recitals, showcases, and performances.
             </p>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 text-xs font-bold">
-              <Sparkles size={12} /> Coming Soon
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 text-xs font-bold">
+              <Sparkles size={12} /> New Feature
             </div>
           </div>
 

@@ -73,10 +73,10 @@ interface Teacher {
 }
 
 const BACKGROUND_OPTIONS = [
+  { id: "plain", label: "Original" },
   { id: "animated", label: "Animated" },
   { id: "gradient", label: "Gradient" },
-  { id: "pattern", label: "Pattern" },
-  { id: "plain", label: "Plain" }
+  { id: "pattern", label: "Pattern" }
 ];
 
 const COLOR_OPTIONS = [
@@ -123,6 +123,7 @@ export default function RecitalEditorClient({
   const [addMode, setAddMode] = useState<"student" | "manual" | "intermission">("student");
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [manualName, setManualName] = useState("");
+  const [manualImageUrl, setManualImageUrl] = useState("");
   const [pieceTitle, setPieceTitle] = useState("");
   const [composer, setComposer] = useState("");
   const [instrument, setInstrument] = useState("");
@@ -195,6 +196,7 @@ export default function RecitalEditorClient({
       formData.set("estimatedDurationMinutes", duration);
     } else if (addMode === "manual") {
       formData.set("performerName", manualName);
+      formData.set("performerImageUrl", manualImageUrl);
       formData.set("pieceTitle", pieceTitle);
       formData.set("composer", composer);
       formData.set("instrument", instrument);
@@ -216,6 +218,7 @@ export default function RecitalEditorClient({
     setAddMode("student");
     setSelectedStudent(null);
     setManualName("");
+    setManualImageUrl("");
     setPieceTitle("");
     setComposer("");
     setInstrument("");
@@ -355,19 +358,68 @@ export default function RecitalEditorClient({
         <h2 className="text-lg font-bold mb-4">Appearance</h2>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Background</label>
-            <div className="flex flex-wrap gap-2">
+            <label className="block text-sm font-medium mb-2">Background Style</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {BACKGROUND_OPTIONS.map((opt) => (
                 <button
                   key={opt.id}
                   onClick={() => setBackgroundType(opt.id)}
-                  className={`px-4 py-2 rounded-lg border transition-colors ${
+                  className={`relative h-20 rounded-lg border-2 transition-all overflow-hidden ${
                     backgroundType === opt.id
-                      ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-600"
+                      ? "border-purple-500 ring-2 ring-purple-500/20"
                       : "border-zinc-200 dark:border-zinc-700 hover:border-zinc-300"
                   }`}
                 >
-                  {opt.label}
+                  {/* Preview thumbnail */}
+                  <div className="absolute inset-0 bg-zinc-100 dark:bg-zinc-800">
+                    {opt.id === "plain" && (
+                      <div
+                        className="absolute inset-0"
+                        style={{
+                          background: `linear-gradient(180deg, ${colorTheme}10 0%, transparent 50%)`
+                        }}
+                      />
+                    )}
+                    {opt.id === "animated" && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        {[...Array(6)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="absolute w-2 h-2 rounded-full animate-pulse"
+                            style={{
+                              backgroundColor: colorTheme,
+                              opacity: 0.3,
+                              left: `${20 + (i % 3) * 30}%`,
+                              top: `${25 + Math.floor(i / 3) * 40}%`,
+                              animationDelay: `${i * 0.2}s`
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    {opt.id === "gradient" && (
+                      <div
+                        className="absolute inset-0"
+                        style={{
+                          background: `radial-gradient(ellipse at 30% 30%, ${colorTheme}30 0%, transparent 60%),
+                                       radial-gradient(ellipse at 70% 70%, ${colorTheme}20 0%, transparent 60%)`
+                        }}
+                      />
+                    )}
+                    {opt.id === "pattern" && (
+                      <div
+                        className="absolute inset-0"
+                        style={{
+                          opacity: 0.15,
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='${encodeURIComponent(colorTheme)}' fill-rule='evenodd'%3E%3Ccircle cx='15' cy='45' r='3'/%3E%3Cpath d='M18 45V25h2v20h-2zm2-20h8v2h-8v-2z'/%3E%3C/g%3E%3C/svg%3E")`,
+                          backgroundSize: "30px 30px"
+                        }}
+                      />
+                    )}
+                  </div>
+                  <span className="absolute bottom-1.5 left-0 right-0 text-center text-xs font-medium">
+                    {opt.label}
+                  </span>
                 </button>
               ))}
             </div>
@@ -642,16 +694,39 @@ export default function RecitalEditorClient({
                     </div>
                   </div>
                 ) : (
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Performer Name</label>
-                    <input
-                      type="text"
-                      value={manualName}
-                      onChange={(e) => setManualName(e.target.value)}
-                      placeholder="John Smith"
-                      className="w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-transparent focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none"
-                    />
-                  </div>
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Performer Name</label>
+                      <input
+                        type="text"
+                        value={manualName}
+                        onChange={(e) => setManualName(e.target.value)}
+                        placeholder="John Smith"
+                        className="w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-transparent focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Photo URL (optional)</label>
+                      <input
+                        type="url"
+                        value={manualImageUrl}
+                        onChange={(e) => setManualImageUrl(e.target.value)}
+                        placeholder="https://example.com/photo.jpg"
+                        className="w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-transparent focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none"
+                      />
+                      {manualImageUrl && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <img
+                            src={manualImageUrl}
+                            alt="Preview"
+                            className="w-10 h-10 rounded-full object-cover"
+                            onError={(e) => (e.currentTarget.style.display = "none")}
+                          />
+                          <span className="text-xs text-zinc-500">Preview</span>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
 
                 <div>
