@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, Sun, Moon, LayoutGrid, Users, Plus, User } from "lucide-react";
+import { LogOut, Sun, Moon, LayoutGrid, Users, Calendar, User } from "lucide-react";
 import { createClient } from "@/utils/supabase/client"; 
 
 export default function StudioNavbar() {
@@ -107,6 +107,7 @@ export default function StudioNavbar() {
   const navLinks = [
     { name: "Dashboard", href: "/studio/dashboard", icon: LayoutGrid },
     { name: "Students", href: studentsHref, icon: Users },
+    { name: "Recitals", href: "/studio/recitals", icon: Calendar },
     { name: "Account", href: "/studio/account", icon: User },
   ];
 

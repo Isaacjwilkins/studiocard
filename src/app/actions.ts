@@ -504,6 +504,417 @@ export async function sendAudioFeedback(formData: FormData) {
     return { success: true, url: urlData.publicUrl };
 }
 
+// ============================================
+// RECITAL ACTIONS
+// ============================================
+
+// 13. GET TEACHER RECITALS
+export async function getTeacherRecitals() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { error: "Not logged in", recitals: [] };
+
+    const { data: recitals, error } = await supabase
+        .from('recitals')
+        .select(`
+            id,
+            title,
+            slug,
+            event_date,
+            venue,
+            is_active,
+            created_at,
+            recital_performers(id)
+        `)
+        .eq('teacher_id', user.id)
+        .order('created_at', { ascending: false });
+
+    if (error) return { error: error.message, recitals: [] };
+
+    // Add performer count to each recital
+    const recitalsWithCount = (recitals || []).map(recital => ({
+        ...recital,
+        performer_count: recital.recital_performers?.length || 0
+    }));
+
+    return { recitals: recitalsWithCount };
+}
+
+// 14. GET SINGLE RECITAL WITH PERFORMERS
+export async function getRecital(recitalId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { error: "Not logged in" };
+
+    const { data: recital, error } = await supabase
+        .from('recitals')
+        .select(`
+            *,
+            recital_performers(*)
+        `)
+        .eq('id', recitalId)
+        .eq('teacher_id', user.id)
+        .single();
+
+    if (error) return { error: error.message };
+    if (!recital) return { error: "Recital not found" };
+
+    // Sort performers by sort_order
+    if (recital.recital_performers) {
+        recital.recital_performers.sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order);
+    }
+
+    return { recital };
+}
+
+// 15. CREATE RECITAL
+export async function createRecital(formData: FormData) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { error: "Not logged in" };
+
+    const title = formData.get('title') as string;
+    const slug = formData.get('slug') as string;
+    const eventDate = formData.get('eventDate') as string;
+    const venue = formData.get('venue') as string;
+    const customNote = formData.get('customNote') as string;
+    const backgroundType = formData.get('backgroundType') as string || 'plain';
+    const colorTheme = formData.get('colorTheme') as string || '#6366f1';
+
+    if (!title || !slug) {
+        return { error: "Title and URL slug are required" };
+    }
+
+    // Validate slug format (alphanumeric and hyphens only)
+    if (!/^[a-z0-9-]+$/.test(slug)) {
+        return { error: "URL slug can only contain lowercase letters, numbers, and hyphens" };
+    }
+
+    const { data: recital, error } = await supabase
+        .from('recitals')
+        .insert({
+            teacher_id: user.id,
+            title,
+            slug,
+            event_date: eventDate || null,
+            venue: venue || null,
+            custom_note: customNote || null,
+            background_type: backgroundType,
+            color_theme: colorTheme
+        })
+        .select()
+        .single();
+
+    if (error) {
+        if (error.code === '23505') {
+            return { error: "A recital with this URL slug already exists" };
+        }
+        return { error: error.message };
+    }
+
+    revalidatePath('/studio/recitals');
+    return { success: true, recital };
+}
+
+// 16. UPDATE RECITAL
+export async function updateRecital(formData: FormData) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { error: "Not logged in" };
+
+    const recitalId = formData.get('recitalId') as string;
+    const title = formData.get('title') as string;
+    const slug = formData.get('slug') as string;
+    const eventDate = formData.get('eventDate') as string;
+    const venue = formData.get('venue') as string;
+    const customNote = formData.get('customNote') as string;
+    const backgroundType = formData.get('backgroundType') as string;
+    const colorTheme = formData.get('colorTheme') as string;
+
+    if (!recitalId || !title || !slug) {
+        return { error: "Recital ID, title, and URL slug are required" };
+    }
+
+    // Validate slug format
+    if (!/^[a-z0-9-]+$/.test(slug)) {
+        return { error: "URL slug can only contain lowercase letters, numbers, and hyphens" };
+    }
+
+    const { error } = await supabase
+        .from('recitals')
+        .update({
+            title,
+            slug,
+            event_date: eventDate || null,
+            venue: venue || null,
+            custom_note: customNote || null,
+            background_type: backgroundType,
+            color_theme: colorTheme,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', recitalId)
+        .eq('teacher_id', user.id);
+
+    if (error) {
+        if (error.code === '23505') {
+            return { error: "A recital with this URL slug already exists" };
+        }
+        return { error: error.message };
+    }
+
+    revalidatePath('/studio/recitals');
+    return { success: true };
+}
+
+// 17. DELETE RECITAL
+export async function deleteRecital(recitalId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { error: "Not logged in" };
+
+    const { error } = await supabase
+        .from('recitals')
+        .delete()
+        .eq('id', recitalId)
+        .eq('teacher_id', user.id);
+
+    if (error) return { error: error.message };
+
+    revalidatePath('/studio/recitals');
+    return { success: true };
+}
+
+// 18. TOGGLE RECITAL ACTIVE STATUS
+export async function toggleRecitalActive(recitalId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { error: "Not logged in" };
+
+    // Get current status
+    const { data: recital } = await supabase
+        .from('recitals')
+        .select('is_active')
+        .eq('id', recitalId)
+        .eq('teacher_id', user.id)
+        .single();
+
+    if (!recital) return { error: "Recital not found" };
+
+    const { error } = await supabase
+        .from('recitals')
+        .update({ is_active: !recital.is_active })
+        .eq('id', recitalId)
+        .eq('teacher_id', user.id);
+
+    if (error) return { error: error.message };
+
+    revalidatePath('/studio/recitals');
+    return { success: true, is_active: !recital.is_active };
+}
+
+// 19. ADD PERFORMER TO RECITAL
+export async function addPerformer(formData: FormData) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { error: "Not logged in" };
+
+    const recitalId = formData.get('recitalId') as string;
+    const artistId = formData.get('artistId') as string | null;
+    const performerName = formData.get('performerName') as string;
+    const performerImageUrl = formData.get('performerImageUrl') as string;
+    const performerBio = formData.get('performerBio') as string;
+    const performerCardSlug = formData.get('performerCardSlug') as string;
+    const pieceTitle = formData.get('pieceTitle') as string;
+    const composer = formData.get('composer') as string;
+    const instrument = formData.get('instrument') as string;
+    const durationStr = formData.get('estimatedDurationMinutes') as string;
+    const isIntermission = formData.get('isIntermission') === 'true';
+
+    if (!recitalId || !performerName || !pieceTitle) {
+        return { error: "Recital ID, performer name, and piece title are required" };
+    }
+
+    // Verify teacher owns this recital
+    const { data: recital } = await supabase
+        .from('recitals')
+        .select('id')
+        .eq('id', recitalId)
+        .eq('teacher_id', user.id)
+        .single();
+
+    if (!recital) return { error: "Recital not found or not authorized" };
+
+    // Get current max sort_order
+    const { data: maxOrder } = await supabase
+        .from('recital_performers')
+        .select('sort_order')
+        .eq('recital_id', recitalId)
+        .order('sort_order', { ascending: false })
+        .limit(1)
+        .single();
+
+    const nextOrder = (maxOrder?.sort_order ?? -1) + 1;
+
+    const { data: performer, error } = await supabase
+        .from('recital_performers')
+        .insert({
+            recital_id: recitalId,
+            artist_id: artistId || null,
+            sort_order: nextOrder,
+            performer_name: performerName,
+            performer_image_url: performerImageUrl || null,
+            performer_bio: performerBio || null,
+            performer_card_slug: performerCardSlug || null,
+            piece_title: pieceTitle,
+            composer: composer || null,
+            instrument: instrument || null,
+            estimated_duration_minutes: durationStr ? parseInt(durationStr) : null,
+            is_intermission: isIntermission
+        })
+        .select()
+        .single();
+
+    if (error) return { error: error.message };
+
+    revalidatePath('/studio/recitals');
+    return { success: true, performer };
+}
+
+// 20. UPDATE PERFORMER
+export async function updatePerformer(formData: FormData) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { error: "Not logged in" };
+
+    const performerId = formData.get('performerId') as string;
+    const performerName = formData.get('performerName') as string;
+    const performerImageUrl = formData.get('performerImageUrl') as string;
+    const performerBio = formData.get('performerBio') as string;
+    const performerCardSlug = formData.get('performerCardSlug') as string;
+    const pieceTitle = formData.get('pieceTitle') as string;
+    const composer = formData.get('composer') as string;
+    const instrument = formData.get('instrument') as string;
+    const durationStr = formData.get('estimatedDurationMinutes') as string;
+
+    if (!performerId) return { error: "Performer ID is required" };
+
+    // Verify teacher owns this performer's recital
+    const { data: performer } = await supabase
+        .from('recital_performers')
+        .select('recital_id')
+        .eq('id', performerId)
+        .single();
+
+    if (!performer) return { error: "Performer not found" };
+
+    const { data: recital } = await supabase
+        .from('recitals')
+        .select('id')
+        .eq('id', performer.recital_id)
+        .eq('teacher_id', user.id)
+        .single();
+
+    if (!recital) return { error: "Not authorized" };
+
+    const { error } = await supabase
+        .from('recital_performers')
+        .update({
+            performer_name: performerName,
+            performer_image_url: performerImageUrl || null,
+            performer_bio: performerBio || null,
+            performer_card_slug: performerCardSlug || null,
+            piece_title: pieceTitle,
+            composer: composer || null,
+            instrument: instrument || null,
+            estimated_duration_minutes: durationStr ? parseInt(durationStr) : null
+        })
+        .eq('id', performerId);
+
+    if (error) return { error: error.message };
+
+    revalidatePath('/studio/recitals');
+    return { success: true };
+}
+
+// 21. REMOVE PERFORMER
+export async function removePerformer(performerId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { error: "Not logged in" };
+
+    // Verify teacher owns this performer's recital
+    const { data: performer } = await supabase
+        .from('recital_performers')
+        .select('recital_id')
+        .eq('id', performerId)
+        .single();
+
+    if (!performer) return { error: "Performer not found" };
+
+    const { data: recital } = await supabase
+        .from('recitals')
+        .select('id')
+        .eq('id', performer.recital_id)
+        .eq('teacher_id', user.id)
+        .single();
+
+    if (!recital) return { error: "Not authorized" };
+
+    const { error } = await supabase
+        .from('recital_performers')
+        .delete()
+        .eq('id', performerId);
+
+    if (error) return { error: error.message };
+
+    revalidatePath('/studio/recitals');
+    return { success: true };
+}
+
+// 22. REORDER PERFORMERS
+export async function reorderPerformers(recitalId: string, orderedIds: string[]) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { error: "Not logged in" };
+
+    // Verify teacher owns this recital
+    const { data: recital } = await supabase
+        .from('recitals')
+        .select('id')
+        .eq('id', recitalId)
+        .eq('teacher_id', user.id)
+        .single();
+
+    if (!recital) return { error: "Recital not found or not authorized" };
+
+    // Update each performer's sort_order
+    const updates = orderedIds.map((id, index) =>
+        supabase
+            .from('recital_performers')
+            .update({ sort_order: index })
+            .eq('id', id)
+            .eq('recital_id', recitalId)
+    );
+
+    const results = await Promise.all(updates);
+    const failed = results.find(r => r.error);
+
+    if (failed?.error) return { error: failed.error.message };
+
+    revalidatePath('/studio/recitals');
+    return { success: true };
+}
+
 // INTERNSHIP APPLICATION
 export async function submitInternshipApplication(formData: FormData) {
     const supabaseAdmin = createAdminClient();
