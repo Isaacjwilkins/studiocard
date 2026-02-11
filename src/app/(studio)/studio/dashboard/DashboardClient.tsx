@@ -7,7 +7,8 @@ import {
     Calendar, Users,
     Plus, Clock, HelpCircle,
     LayoutDashboard, Trash2, Settings,
-    Inbox, ArrowRight, Music, CheckCircle, X, Sparkles
+    Inbox, ArrowRight, Music, CheckCircle, X, Sparkles,
+    ChevronDown, ChevronUp
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -415,6 +416,7 @@ function ScheduleManager({ teacherId, students, initialSchedule }: any) {
     const [schedule, setSchedule] = useState(initialSchedule);
     const [isAdding, setIsAdding] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     // Form State
     const [day, setDay] = useState("1");
@@ -473,12 +475,22 @@ function ScheduleManager({ teacherId, students, initialSchedule }: any) {
                     </h3>
                     <p className="text-xs text-zinc-500 font-bold mt-1 uppercase tracking-widest">Manage your recurring lessons</p>
                 </div>
-                <button
-                    onClick={() => setIsAdding(!isAdding)}
-                    className="flex items-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-transform"
-                >
-                    {isAdding ? <Settings size={14} /> : <Plus size={14} />} {isAdding ? "Cancel" : "Add Slot"}
-                </button>
+                <div className="flex items-center gap-2">
+                    {/* Mobile expand/collapse toggle */}
+                    <button
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="md:hidden flex items-center gap-2 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-xs font-bold"
+                    >
+                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        {isExpanded ? "Hide" : "Show"}
+                    </button>
+                    <button
+                        onClick={() => setIsAdding(!isAdding)}
+                        className="flex items-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-transform"
+                    >
+                        {isAdding ? <Settings size={14} /> : <Plus size={14} />} {isAdding ? "Cancel" : "Add Slot"}
+                    </button>
+                </div>
             </div>
 
             {/* Add Slot Form */}
@@ -498,8 +510,9 @@ function ScheduleManager({ teacherId, students, initialSchedule }: any) {
                 </div>
             )}
 
-            {/* Calendar Grid */}
-            <div className="grid md:grid-cols-7 divide-y md:divide-y-0 md:divide-x divide-zinc-100 dark:divide-white/5">
+            {/* Calendar Grid - Collapsible on mobile */}
+            <div className={`${isExpanded ? 'block' : 'hidden'} md:block`}>
+                <div className="grid md:grid-cols-7 divide-y md:divide-y-0 md:divide-x divide-zinc-100 dark:divide-white/5">
                 {days.map((dayName, index) => {
                     const dayLessons = schedule
                         .filter((s: any) => s.day_of_week === index)
@@ -538,6 +551,7 @@ function ScheduleManager({ teacherId, students, initialSchedule }: any) {
                         </div>
                     );
                 })}
+                </div>
             </div>
         </div>
     );
