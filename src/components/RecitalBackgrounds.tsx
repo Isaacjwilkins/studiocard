@@ -197,11 +197,10 @@ export default function RecitalBackgrounds({ type, color }: RecitalBackgroundsPr
     );
   }
 
-  // Original/Plain background (default)
+  // Original/Plain background (default) - let the main Background component show through
+  // Just add a very subtle color tint on top
   return (
-    <div className="fixed inset-0 -z-30">
-      <div className="absolute inset-0 bg-white dark:bg-black" />
-      {/* Very subtle top gradient with theme color */}
+    <div className="fixed inset-0 -z-20 pointer-events-none">
       <div
         className="absolute inset-0"
         style={{

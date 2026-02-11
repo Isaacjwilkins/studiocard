@@ -6,6 +6,7 @@ import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sun, Moon, ChevronDown, ChevronUp, ExternalLink, Clock, MapPin, Calendar } from "lucide-react";
 import RecitalBackgrounds from "@/components/RecitalBackgrounds";
+import Background from "@/components/Background";
 
 interface Performer {
   id: string;
@@ -98,7 +99,8 @@ export default function RecitalProgram({
 
   return (
     <div className="min-h-screen relative">
-      {/* Background */}
+      {/* Background - only show animated Background for "plain" (original) type */}
+      {recital.background_type === "plain" && <Background />}
       <RecitalBackgrounds type={recital.background_type} color={recital.color_theme} />
 
       {/* Theme Toggle */}

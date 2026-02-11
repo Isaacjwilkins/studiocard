@@ -138,7 +138,7 @@ export default function TeachersPage() {
       <section className="max-w-6xl mx-auto mb-32">
         <div className="grid md:grid-cols-2 gap-12 items-center bg-gradient-to-br from-purple-50 via-indigo-50 to-violet-50 dark:from-purple-900/10 dark:via-indigo-900/10 dark:to-violet-900/10 backdrop-blur-2xl border border-purple-200/50 dark:border-purple-800/30 rounded-[2.5rem] p-8 md:p-12 shadow-2xl overflow-hidden">
 
-          <div className="space-y-6">
+          <div className="space-y-6 md:order-2">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-bold text-xs uppercase tracking-widest">
               <Sparkles size={12} /> New Feature
             </div>
@@ -195,7 +195,7 @@ export default function TeachersPage() {
           </div>
 
           {/* RECITAL PROGRAM MOCKUP */}
-          <div className="relative">
+          <div className="relative md:order-1">
             {/* Phone Frame */}
             <div className="relative mx-auto w-[280px] md:w-[320px]">
               <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-[3rem] blur-3xl" />
@@ -288,7 +288,7 @@ export default function TeachersPage() {
             </div>
 
             {/* Floating QR Code Badge */}
-            <div className="absolute -right-4 top-20 bg-white dark:bg-zinc-800 rounded-xl p-3 shadow-xl border border-zinc-200 dark:border-zinc-700 transform rotate-6">
+            <div className="absolute -left-4 md:-right-4 md:left-auto top-20 bg-white dark:bg-zinc-800 rounded-xl p-3 shadow-xl border border-zinc-200 dark:border-zinc-700 transform -rotate-6 md:rotate-6">
               <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-lg flex items-center justify-center">
                 <QrCode size={32} className="text-white" />
               </div>

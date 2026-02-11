@@ -4,6 +4,6 @@ export default function RecitalLayout({
   children: React.ReactNode;
 }) {
   // Clean layout - no navbar, no footer
-  // Just the content for standalone recital programs
+  // Background is handled by RecitalProgram based on background_type
   return <>{children}</>;
 }

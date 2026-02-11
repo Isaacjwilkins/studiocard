@@ -16,7 +16,10 @@ import {
   Check,
   AlertCircle,
   User,
-  Music
+  Music,
+  ChevronDown,
+  ChevronUp,
+  Calendar
 } from "lucide-react";
 import {
   updateRecital,
@@ -117,6 +120,9 @@ export default function RecitalEditorClient({
   const [backgroundType, setBackgroundType] = useState(recital.background_type);
   const [colorTheme, setColorTheme] = useState(recital.color_theme);
   const [isActive, setIsActive] = useState(recital.is_active);
+
+  // Collapsible state for mobile
+  const [showEventDetails, setShowEventDetails] = useState(false);
 
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false);
@@ -319,36 +325,54 @@ export default function RecitalEditorClient({
               studiocard.live/recital/{teacher.username}/{slug}
             </p>
           </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Date & Time</label>
-              <input
-                type="datetime-local"
-                value={eventDate}
-                onChange={(e) => setEventDate(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-transparent focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none"
-              />
+          {/* Collapsible Event Details on Mobile */}
+          <div className="md:contents">
+            <button
+              type="button"
+              onClick={() => setShowEventDetails(!showEventDetails)}
+              className="md:hidden flex items-center justify-between w-full px-4 py-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50"
+            >
+              <span className="flex items-center gap-2 text-sm font-medium">
+                <Calendar size={16} className="text-purple-500" />
+                Event Details
+                {eventDate && <span className="text-xs text-zinc-500">(set)</span>}
+              </span>
+              {showEventDetails ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+
+            <div className={`${showEventDetails ? 'block' : 'hidden'} md:block space-y-4`}>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    value={eventDate}
+                    onChange={(e) => setEventDate(e.target.value)}
+                    className="w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-transparent focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Venue</label>
+                  <input
+                    type="text"
+                    value={venue}
+                    onChange={(e) => setVenue(e.target.value)}
+                    placeholder="Community Hall"
+                    className="w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-transparent focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Welcome Note</label>
+                <textarea
+                  value={customNote}
+                  onChange={(e) => setCustomNote(e.target.value)}
+                  placeholder="Welcome to our annual recital..."
+                  rows={2}
+                  className="w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-transparent focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none resize-none"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Venue</label>
-              <input
-                type="text"
-                value={venue}
-                onChange={(e) => setVenue(e.target.value)}
-                placeholder="Community Hall"
-                className="w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-transparent focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Welcome Note</label>
-            <textarea
-              value={customNote}
-              onChange={(e) => setCustomNote(e.target.value)}
-              placeholder="Welcome to our annual recital..."
-              rows={2}
-              className="w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-transparent focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none resize-none"
-            />
           </div>
         </div>
       </section>
@@ -373,12 +397,48 @@ export default function RecitalEditorClient({
                   {/* Preview thumbnail */}
                   <div className="absolute inset-0 bg-zinc-100 dark:bg-zinc-800">
                     {opt.id === "plain" && (
-                      <div
-                        className="absolute inset-0"
-                        style={{
-                          background: `linear-gradient(180deg, ${colorTheme}10 0%, transparent 50%)`
-                        }}
-                      />
+                      <>
+                        {/* Swirl pattern to indicate animated background */}
+                        <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+                          <svg viewBox="0 0 100 100" className="w-full h-full opacity-20">
+                            <path
+                              d="M50 10 Q70 30 50 50 Q30 70 50 90"
+                              stroke={colorTheme}
+                              strokeWidth="2"
+                              fill="none"
+                              className="animate-pulse"
+                            />
+                            <path
+                              d="M30 20 Q50 40 30 60 Q10 80 30 95"
+                              stroke={colorTheme}
+                              strokeWidth="1.5"
+                              fill="none"
+                              opacity="0.6"
+                            />
+                            <path
+                              d="M70 5 Q90 25 70 45 Q50 65 70 85"
+                              stroke={colorTheme}
+                              strokeWidth="1.5"
+                              fill="none"
+                              opacity="0.6"
+                            />
+                          </svg>
+                        </div>
+                        {/* Floating dots like particles */}
+                        {[...Array(5)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="absolute w-1.5 h-1.5 rounded-full animate-pulse"
+                            style={{
+                              backgroundColor: colorTheme,
+                              opacity: 0.4,
+                              left: `${15 + i * 18}%`,
+                              top: `${20 + (i % 3) * 25}%`,
+                              animationDelay: `${i * 0.3}s`
+                            }}
+                          />
+                        ))}
+                      </>
                     )}
                     {opt.id === "animated" && (
                       <div className="absolute inset-0 flex items-center justify-center">
@@ -447,9 +507,9 @@ export default function RecitalEditorClient({
 
       {/* Performers */}
       <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h2 className="text-lg font-bold">Performers</h2>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => {
                 setAddMode("student");
@@ -458,7 +518,7 @@ export default function RecitalEditorClient({
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
             >
               <Plus size={14} />
-              Add Student
+              <span className="hidden xs:inline">Add</span> Student
             </button>
             <button
               onClick={() => {
@@ -468,7 +528,7 @@ export default function RecitalEditorClient({
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg transition-colors"
             >
               <User size={14} />
-              Manual Entry
+              <span className="hidden xs:inline">Manual</span><span className="xs:hidden">+</span>
             </button>
             <button
               onClick={() => {
@@ -478,7 +538,7 @@ export default function RecitalEditorClient({
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg transition-colors"
             >
               <Clock size={14} />
-              Intermission
+              <span className="hidden sm:inline">Intermission</span><span className="sm:hidden">Break</span>
             </button>
           </div>
         </div>
