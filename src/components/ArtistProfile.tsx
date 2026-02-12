@@ -65,9 +65,10 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
   const [artist, setArtist] = useState<Artist>(initialArtist);
   const [tracks, setTracks] = useState<Track[]>(initialTracks);
 
-  // UI State
-  const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
-  const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({});
+  // UI State - Single Player Pattern
+  const [activeTrack, setActiveTrack] = useState<Track | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Playback
   const [progress, setProgress] = useState(0);
@@ -184,43 +185,54 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
     }
   };
 
-  // --- AUDIO HANDLERS ---
-  const handlePlayToggle = (trackId: string) => {
-    const audio = audioRefs.current[trackId];
-    if (!audio) return;
-    if (playingTrackId === trackId) {
-      audio.pause();
-      setPlayingTrackId(null);
-    } else {
-      if (playingTrackId && audioRefs.current[playingTrackId]) {
-        audioRefs.current[playingTrackId]?.pause();
+  // --- AUDIO HANDLERS (Single Player Pattern) ---
+
+  // When activeTrack changes, load and play
+  useEffect(() => {
+    if (activeTrack && audioRef.current) {
+      audioRef.current.src = activeTrack.audio_url;
+      audioRef.current.play()
+        .then(() => setIsPlaying(true))
+        .catch(err => console.error("Playback failed", err));
+    }
+  }, [activeTrack]);
+
+  const togglePlay = (track: Track) => {
+    if (activeTrack?.id === track.id) {
+      // Toggle pause/play on current track
+      if (isPlaying) {
+        audioRef.current?.pause();
+        setIsPlaying(false);
+      } else {
+        audioRef.current?.play();
+        setIsPlaying(true);
       }
-      audio.play();
-      setPlayingTrackId(trackId);
-      setCurrentTime(audio.currentTime);
+    } else {
+      // Switch to new track (useEffect handles play)
+      setActiveTrack(track);
       setProgress(0);
-      if (!isNaN(audio.duration) && isFinite(audio.duration)) setDuration(audio.duration);
+      setCurrentTime(0);
     }
   };
 
-  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLAudioElement>, trackId: string) => {
-    if (trackId !== playingTrackId) return;
-    const audio = e.currentTarget;
-    if (audio.duration && isFinite(audio.duration)) {
+  const handleTimeUpdate = () => {
+    const audio = audioRef.current;
+    if (audio && audio.duration && isFinite(audio.duration)) {
       setCurrentTime(audio.currentTime);
       setProgress((audio.currentTime / audio.duration) * 100);
     }
   };
 
-  const handleLoadedMetadata = (e: React.SyntheticEvent<HTMLAudioElement>, trackId: string) => {
-    if (trackId !== playingTrackId) return;
-    const audio = e.currentTarget;
-    if (isFinite(audio.duration)) setDuration(audio.duration);
+  const handleLoadedMetadata = () => {
+    const audio = audioRef.current;
+    if (audio && isFinite(audio.duration)) {
+      setDuration(audio.duration);
+    }
   };
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>, trackId: string) => {
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newProgress = parseFloat(e.target.value);
-    const audio = audioRefs.current[trackId];
+    const audio = audioRef.current;
     if (audio && audio.duration && isFinite(audio.duration)) {
       const newTime = (newProgress / 100) * audio.duration;
       audio.currentTime = newTime;
@@ -510,21 +522,22 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
               </p>
             ) : (
               displayedTracks.map((track) => {
-                const isPlaying = playingTrackId === track.id;
+                const isCurrent = activeTrack?.id === track.id;
+                const isTrackPlaying = isCurrent && isPlaying;
                 const isPublic = track.is_public === true;
                 return (
-                  <div key={track.id} className={`relative p-4 rounded-2xl border transition-all ${isPlaying ? 'bg-white/20 border-foreground/20' : 'bg-black/5 dark:bg-white/5 border-transparent'}`}>
+                  <div key={track.id} className={`relative p-4 rounded-2xl border transition-all ${isCurrent ? 'bg-white/20 border-foreground/20' : 'bg-black/5 dark:bg-white/5 border-transparent'}`}>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-4 overflow-hidden flex-1">
-                        <button onClick={() => handlePlayToggle(track.id)} className="w-12 h-12 shrink-0 rounded-full bg-foreground text-background flex items-center justify-center shadow-lg transition-transform active:scale-95">
-                          {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-1" />}
+                        <button onClick={() => togglePlay(track)} className="w-12 h-12 shrink-0 rounded-full bg-foreground text-background flex items-center justify-center shadow-lg transition-transform active:scale-95">
+                          {isTrackPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-1" />}
                         </button>
                         <div className="min-w-0 flex-1">
                           <h4 className={`font-bold text-lg truncate pr-2 ${!isPublic && isManager ? 'opacity-50' : ''}`}>{track.title}</h4>
-                          {isPlaying ? (
+                          {isCurrent ? (
                             <div className="flex items-center gap-3 mt-1 pr-4 animate-in fade-in slide-in-from-left-2">
                               <span className="text-[10px] font-mono opacity-60 w-8 text-right">{formatTime(currentTime)}</span>
-                              <input type="range" min="0" max="100" step="0.1" value={progress} onChange={(e) => handleSeek(e, track.id)} className="flex-1 h-1.5 bg-black/10 dark:bg-white/10 rounded-full appearance-none cursor-pointer accent-foreground" />
+                              <input type="range" min="0" max="100" step="0.1" value={progress} onChange={handleSeek} className="flex-1 h-1.5 bg-black/10 dark:bg-white/10 rounded-full appearance-none cursor-pointer accent-foreground" />
                               <span className="text-[10px] font-mono opacity-60 w-8">{formatTime(duration)}</span>
                             </div>
                           ) : (
@@ -544,7 +557,6 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
                         )}
                       </div>
                     </div>
-                    <audio ref={(el) => { audioRefs.current[track.id] = el }} src={track.audio_url} onTimeUpdate={(e) => handleTimeUpdate(e, track.id)} onLoadedMetadata={(e) => handleLoadedMetadata(e, track.id)} onEnded={() => { setPlayingTrackId(null); setProgress(0); }} className="hidden" />
                   </div>
                 )
               })
@@ -590,6 +602,15 @@ export default function ArtistProfile({ artist: initialArtist, tracks: initialTr
           {' '}&ndash; Ask your teacher about it.
         </p>
       </div>
+
+      {/* Single Global Audio Player - loads audio only when user clicks play */}
+      <audio
+        ref={audioRef}
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={handleLoadedMetadata}
+        onEnded={() => { setIsPlaying(false); setProgress(0); }}
+        className="hidden"
+      />
     </div>
   );
 }

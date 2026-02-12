@@ -1,20 +1,22 @@
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/utils/supabase/server';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import ArtistProfile from '@/components/ArtistProfile'; // Import your new component
+import ArtistProfile from '@/components/ArtistProfile';
 
 export const revalidate = 60;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const supabase = await createClient();
   const { data: artist } = await supabase.from('artists').select('full_name').eq('slug', slug).single();
   return { title: artist ? `${artist.full_name} | studio.card` : 'Artist Not Found' };
 }
 
 export default async function ArtistPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const supabase = await createClient();
 
-  // Fetch Artist (including new social columns)
+  // Fetch Artist
   const { data: artist } = await supabase
     .from('artists')
     .select('*')
