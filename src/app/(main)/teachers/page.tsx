@@ -12,7 +12,7 @@ export default function TeachersPage() {
       {/* 1. HERO */}
       <section className="max-w-4xl mx-auto text-center mb-24">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-bold text-xs uppercase tracking-widest mb-6">
-          <Users size={12} /> For Private Studio Owners
+          <Users size={12} /> For Private Teachers
         </div>
 
         <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-foreground mb-8">
