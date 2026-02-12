@@ -23,9 +23,9 @@ export default function TeachersPage() {
         </h1>
 
         <p className="text-xl text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto leading-relaxed mb-8">
-          Stop texting parents "Did they practice?"
+          Help encourage your students to love practice, because they love music.
           <span className="block mt-2 font-medium text-foreground">
-            Wake up to recordings, not excuses. Listen and reply in seconds.
+            Hear what they are doing throughout the week, encourage them and send feedback.
           </span>
         </p>
 

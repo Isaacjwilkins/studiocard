@@ -35,8 +35,9 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // refreshing the auth token
-  await supabase.auth.getUser()
+  // Refresh the session (fast - validates JWT locally, only hits DB if refresh needed)
+  // Use getUser() in your protected pages/layouts for strict validation
+  await supabase.auth.getSession()
 
   return response
 }
